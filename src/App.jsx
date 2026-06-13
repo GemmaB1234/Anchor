@@ -432,7 +432,25 @@ function ToolSection({ section }) {
             {section.intro}
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {section.items.map(item => (
+            {section.items.map(item => item.featured ? (
+              <a key={item.name} href={item.url} target="_blank" rel="noopener noreferrer"
+                style={{ textDecoration: "none", background: "linear-gradient(135deg, #f5f0ff, #ede8ff)", border: `2px solid ${item.color}44`, borderRadius: 16, padding: "16px 16px", display: "block", position: "relative", overflow: "hidden" }}>
+                <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg, ${item.color}, ${item.color}88)` }} />
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+                  <div style={{ width: 42, height: 42, borderRadius: 13, background: `${item.color}25`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>{item.emoji}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: "#2a1a5a", fontFamily: "'Nunito', sans-serif" }}>{item.name}</div>
+                      <div style={{ fontSize: 9, background: item.color, color: "white", padding: "2px 8px", borderRadius: 6, fontFamily: "'Nunito', sans-serif", fontWeight: 700 }}>{item.tag}</div>
+                    </div>
+                    <div style={{ fontSize: 12, color: "#6a5a90", fontFamily: "'Nunito Sans', sans-serif", lineHeight: 1.4 }}>{item.tagline}</div>
+                  </div>
+                </div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: item.color, fontFamily: "'Nunito', sans-serif", display: "flex", alignItems: "center", gap: 4 }}>
+                  Open ND Brain OS →
+                </div>
+              </a>
+            ) : (
               <a key={item.name} href={item.url} target="_blank" rel="noopener noreferrer"
                 style={{ textDecoration: "none", background: "#fafcf8", border: `1px solid ${item.color}22`, borderRadius: 14, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12, position: "relative", overflow: "hidden" }}>
                 <div style={{ position: "absolute", top: 0, left: 0, bottom: 0, width: 3, background: item.color, borderRadius: "3px 0 0 3px" }} />
@@ -2863,6 +2881,64 @@ export default function MentalHealthTracker() {
               <div style={{ fontSize: 11, color: "#9aca9a", textAlign: "center", lineHeight: 1.5, paddingBottom: 4 }}>
                 Your plan is stored privately on this device — Anchor never sees it.<br />Consider sharing it with someone you trust.
               </div>
+
+              {/* Download safety plan */}
+              {safetyPlan.lastUpdated && (
+                <button
+                  onClick={() => {
+                    const SECTION_LABELS = {
+                      warningSigns: "My warning signs",
+                      copingStrategies: "Things that help me",
+                      distractions: "Distractions & activities",
+                      supportPeople: "People I trust",
+                      professionalContacts: "Professional contacts",
+                      safeEnvironment: "Making my environment safer",
+                      reasons: "My reasons to stay",
+                      level1: "What I need at Level 1",
+                      level2: "What I need at Level 2",
+                      level3: "What I need at Level 3",
+                    };
+                    const date = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+                    const lines = [
+                      "MY PERSONAL SAFETY PLAN",
+                      "Created with Anchor by Wired & Well",
+                      `Last updated: ${date}`,
+                      "",
+                      "─────────────────────────────────────",
+                      "",
+                    ];
+                    Object.entries(SECTION_LABELS).forEach(([key, label]) => {
+                      if (safetyPlan[key]?.trim()) {
+                        lines.push(`${label.toUpperCase()}`);
+                        lines.push(safetyPlan[key].trim());
+                        lines.push("");
+                      }
+                    });
+                    lines.push("─────────────────────────────────────");
+                    lines.push("Anchor is a self-help tool and is not a substitute for professional advice.");
+                    lines.push("In an emergency call 999. For urgent mental health support call 111 option 2.");
+                    lines.push("Samaritans: 116 123  |  Shout: text SHOUT to 85258");
+                    lines.push("wiredandwell.co.uk");
+
+                    const blob = new Blob([lines.join("\n")], { type: "text/plain" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = "my-anchor-safety-plan.txt";
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                  style={{
+                    width: "100%", padding: "13px", borderRadius: 14,
+                    background: "#f4f9f2", border: "1.5px solid #c8e4c0",
+                    color: "#2a5a2a", fontSize: 13, fontWeight: 700,
+                    cursor: "pointer", fontFamily: "'Nunito', sans-serif",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  }}
+                >
+                  <span>📄</span> Download my safety plan
+                </button>
+              )}
             </div>
           );
         })()}
@@ -2908,6 +2984,7 @@ export default function MentalHealthTracker() {
               color: "#a78bfa",
               intro: "These work with an ADHD brain, not against it — when starting feels impossible, these help.",
               items: [
+                { name: "ND Brain OS", tagline: "Built for neurodivergent minds — dopamine, habits, focus & life admin in one place", emoji: "⚡", color: "#a78bfa", url: "https://nd-brain-os.vercel.app", tag: "By Wired & Well", featured: true },
                 { name: "Goblin Tools", tagline: "Break any task into tiny steps with AI", emoji: "👺", color: "#a78bfa", url: "https://goblin.tools", tag: "Task Breakdown" },
                 { name: "Focusmate", tagline: "Body doubling — work alongside someone online", emoji: "🧑‍💻", color: "#38bdf8", url: "https://www.focusmate.com", tag: "Focus" },
                 { name: "Tiimo", tagline: "Visual daily planner designed for ADHD & autism", emoji: "🕐", color: "#fb923c", url: "https://www.tiimoapp.com", tag: "Planning" },
