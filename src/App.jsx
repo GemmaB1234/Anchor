@@ -702,18 +702,33 @@ export default function MentalHealthTracker() {
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
     setJournal("");
-    if (stress >= 8 || mood === 1) {
+
+    // ── Smart routing based on stress AND mood combined ──────────────────────
+    // Stress: 1-3=nothing, 4-5=level1, 6-7=level2, 8-10=level3+crisis
+    // Mood: 5(great)/4(good)=celebrate, 3(meh)=level1, 2(bad)=level2, 1(awful)=level3+crisis
+
+    const stressLevel = stress >= 8 ? 3 : stress >= 6 ? 2 : stress >= 4 ? 1 : 0;
+    const moodLevel = mood === 1 ? 3 : mood === 2 ? 2 : mood === 3 ? 1 : 0;
+    const combinedLevel = Math.max(stressLevel, moodLevel);
+
+    if (combinedLevel === 3) {
+      // Level 3 — crisis support + safety plan level 3 + reach out
       setTimeout(() => setShowCrisis(true), 400);
-      setCheckinSuggestions({ type: "crisis", tools: CHECKIN_TOOL_SUGGESTIONS.crisis });
-    } else if (stress >= 6 || mood === 2) {
-      setCheckinSuggestions({ type: "highStress", tools: CHECKIN_TOOL_SUGGESTIONS.highStress });
-    } else if (mood <= 2) {
-      setCheckinSuggestions({ type: "lowMood", tools: CHECKIN_TOOL_SUGGESTIONS.lowMood });
-    } else if (stress >= 4) {
-      setCheckinSuggestions({ type: "unfocused", tools: CHECKIN_TOOL_SUGGESTIONS.unfocused });
+      setCheckinSuggestions({ type: "level3", planLevel: "level3" });
+    } else if (combinedLevel === 2) {
+      // Level 2 — safety plan level 2 + reach out
+      setCheckinSuggestions({ type: "level2", planLevel: "level2" });
+    } else if (combinedLevel === 1) {
+      // Level 1 — safety plan level 1 + breathe
+      setCheckinSuggestions({ type: "level1", planLevel: "level1" });
+    } else if (mood >= 4) {
+      // Good or great — celebrate
+      setCheckinSuggestions({ type: "celebrate", planLevel: null });
     } else {
       setCheckinSuggestions(null);
     }
+
+    // Escalation detection — last 3 check-ins
     const allEntries = [entry, ...entries].slice(0, 10);
     if (allEntries.length >= 3) {
       const last3Stress = allEntries.slice(0, 3).filter(e => e.stress > 0).map(e => e.stress);
@@ -1483,40 +1498,165 @@ export default function MentalHealthTracker() {
               {saved ? "✓ Saved!" : "Save Check-In"}
             </button>
 
-            {/* ── Check-in tool suggestions ── */}
-            {checkinSuggestions && saved === false && (
-              <div style={{ background: "#fafcf8", border: "1px solid #deeeda", borderRadius: 20, padding: "18px 20px", animation: "fadeIn 0.4s ease" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                  <div style={{ fontSize: 11, fontFamily: "'DM Mono', monospace", color: "#5a8a5a", letterSpacing: 2 }}>
-                    {checkinSuggestions.type === "crisis" ? "SUPPORT AVAILABLE NOW" :
-                     checkinSuggestions.type === "highStress" ? "MIGHT HELP RIGHT NOW" :
-                     checkinSuggestions.type === "lowMood" ? "THINGS THAT MIGHT HELP" :
-                     "FOCUS & CALM TOOLS"}
+            {/* ── Smart post check-in routing ── */}
+            {checkinSuggestions && (
+              <div style={{ animation: "fadeIn 0.4s ease" }}>
+
+                {/* CELEBRATE — mood 4 or 5, stress 1-3 */}
+                {checkinSuggestions.type === "celebrate" && (
+                  <div style={{ background: "linear-gradient(135deg, #f0fdf4, #e8f5e8)", border: "1.5px solid #86efac", borderRadius: 20, padding: "20px 18px" }}>
+                    <div style={{ fontSize: 28, marginBottom: 8, textAlign: "center" }}>🌟</div>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: "#1a4a1a", fontFamily: "'Nunito', sans-serif", textAlign: "center", marginBottom: 6 }}>
+                      You're doing well today.
+                    </div>
+                    <div style={{ fontSize: 13, color: "#4a7a4a", fontFamily: "'Nunito Sans', sans-serif", textAlign: "center", lineHeight: 1.7, marginBottom: 16 }}>
+                      Notice it. Hold onto it. That matters.
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button onClick={() => { setTab("journal"); setCheckinSuggestions(null); }}
+                        style={{ flex: 1, padding: "11px", borderRadius: 12, background: "#f0f7ee", border: "1px solid #c8e4c0", color: "#2a5a2a", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Nunito', sans-serif" }}>
+                        📓 Write it down
+                      </button>
+                      <button onClick={() => { setTab("moodboard"); setCheckinSuggestions(null); }}
+                        style={{ flex: 1, padding: "11px", borderRadius: 12, background: "#f0f7ee", border: "1px solid #c8e4c0", color: "#2a5a2a", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Nunito', sans-serif" }}>
+                        🖼️ Mood board
+                      </button>
+                    </div>
+                    <button onClick={() => setCheckinSuggestions(null)}
+                      style={{ width: "100%", marginTop: 8, padding: "8px", borderRadius: 10, background: "transparent", border: "none", color: "#9aba98", fontSize: 12, cursor: "pointer", fontFamily: "'Nunito Sans', sans-serif" }}>
+                      Just carry on
+                    </button>
                   </div>
-                  <button onClick={() => setCheckinSuggestions(null)} style={{ background: "none", border: "none", color: "#7aaa7a", fontSize: 14, cursor: "pointer" }}>✕</button>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {checkinSuggestions.tools.map((tool, i) => {
-                    const inner = (
-                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <div style={{ width: 38, height: 38, borderRadius: 10, background: `${tool.color}22`, border: `1px solid ${tool.color}33`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>{tool.emoji}</div>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 13, fontWeight: 600, color: "#1a3a1a" }}>{tool.name}</div>
-                          <div style={{ fontSize: 11, color: "#5a8a5a" }}>{tool.desc}</div>
+                )}
+
+                {/* LEVEL 1 — stress 4-5 or mood meh */}
+                {checkinSuggestions.type === "level1" && (
+                  <div style={{ background: "#fafcf8", border: "1.5px solid #d4e8cc", borderRadius: 20, padding: "20px 18px" }}>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: "#2a4a2a", fontFamily: "'Nunito', sans-serif", marginBottom: 4 }}>
+                      Things feel a bit heavy.
+                    </div>
+                    <div style={{ fontSize: 13, color: "#6a8a6a", fontFamily: "'Nunito Sans', sans-serif", lineHeight: 1.7, marginBottom: 14 }}>
+                      That's okay. Here are a few things that might help right now.
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      <button onClick={() => { setTab("safetyplan"); setPlanSection(0); setCheckinSuggestions(null); }}
+                        style={{ padding: "13px 16px", borderRadius: 14, background: "linear-gradient(135deg, #f0f7ee, #e8f4e4)", border: "1.5px solid #c8e0c0", color: "#1e3820", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Nunito', sans-serif", display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
+                        <span style={{ fontSize: 20 }}>🛡️</span>
+                        <div>
+                          <div>My safety plan — Level 1</div>
+                          <div style={{ fontSize: 11, fontWeight: 400, color: "#7a9a7a", marginTop: 1 }}>Your coping strategies and what helps</div>
                         </div>
-                        <div style={{ fontSize: 14, color: tool.color }}>→</div>
+                      </button>
+                      <button onClick={() => { setTab("breathe"); setCheckinSuggestions(null); }}
+                        style={{ padding: "13px 16px", borderRadius: 14, background: "#f4f8f2", border: "1px solid #deeeda", color: "#1e3820", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Nunito', sans-serif", display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
+                        <span style={{ fontSize: 20 }}>🌬️</span>
+                        <div>
+                          <div>Breathing techniques</div>
+                          <div style={{ fontSize: 11, fontWeight: 400, color: "#7a9a7a", marginTop: 1 }}>Slow it down in a few breaths</div>
+                        </div>
+                      </button>
+                      <button onClick={() => { setTab("reachout"); setCheckinSuggestions(null); }}
+                        style={{ padding: "13px 16px", borderRadius: 14, background: "#f4f8f2", border: "1px solid #deeeda", color: "#1e3820", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Nunito', sans-serif", display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
+                        <span style={{ fontSize: 20 }}>💌</span>
+                        <div>
+                          <div>Reach out to someone</div>
+                          <div style={{ fontSize: 11, fontWeight: 400, color: "#7a9a7a", marginTop: 1 }}>We'll help you find the words</div>
+                        </div>
+                      </button>
+                    </div>
+                    <button onClick={() => setCheckinSuggestions(null)}
+                      style={{ width: "100%", marginTop: 8, padding: "8px", borderRadius: 10, background: "transparent", border: "none", color: "#9aba98", fontSize: 12, cursor: "pointer", fontFamily: "'Nunito Sans', sans-serif" }}>
+                      I'm okay for now
+                    </button>
+                  </div>
+                )}
+
+                {/* LEVEL 2 — stress 6-7 or mood bad */}
+                {checkinSuggestions.type === "level2" && (
+                  <div style={{ background: "#fafcf8", border: "1.5px solid #c8d8e8", borderRadius: 20, overflow: "hidden" }}>
+                    <div style={{ height: 4, background: "linear-gradient(90deg, #60a5fa, #38bdf8)" }} />
+                    <div style={{ padding: "18px 18px 16px" }}>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: "#1a2a4a", fontFamily: "'Nunito', sans-serif", marginBottom: 4 }}>
+                        Today is genuinely hard.
                       </div>
-                    );
-                    const cardStyle = { textDecoration: "none", display: "block", background: "#f2f7f0", border: `1px solid ${tool.color}22`, borderRadius: 12, padding: "10px 12px", cursor: "pointer" };
-                    if (tool.crisis) return (
-                      <div key={i} onClick={() => setShowCrisis(true)} style={cardStyle}>{inner}</div>
-                    );
-                    if (tool.tab) return (
-                      <div key={i} onClick={() => { setTab(tool.tab); setCheckinSuggestions(null); }} style={cardStyle}>{inner}</div>
-                    );
-                    return <a key={i} href={tool.url} target="_blank" rel="noopener noreferrer" style={cardStyle}>{inner}</a>;
-                  })}
-                </div>
+                      <div style={{ fontSize: 13, color: "#5a6a80", fontFamily: "'Nunito Sans', sans-serif", lineHeight: 1.7, marginBottom: 14 }}>
+                        You don't have to push through this alone. Here's what might help.
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                        <button onClick={() => { setTab("safetyplan"); setPlanSection(1); setCheckinSuggestions(null); }}
+                          style={{ padding: "13px 16px", borderRadius: 14, background: "linear-gradient(135deg, #eff6ff, #dbeafe)", border: "1.5px solid #93c5fd", color: "#1e3a5f", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Nunito', sans-serif", display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
+                          <span style={{ fontSize: 20 }}>🛡️</span>
+                          <div>
+                            <div>My safety plan — Level 2</div>
+                            <div style={{ fontSize: 11, fontWeight: 400, color: "#6080a0", marginTop: 1 }}>Your plan for when things feel overwhelming</div>
+                          </div>
+                        </button>
+                        <button onClick={() => { setTab("reachout"); setCheckinSuggestions(null); }}
+                          style={{ padding: "13px 16px", borderRadius: 14, background: "#f8f4ff", border: "1.5px solid #c8b8e8", color: "#3a2a5a", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Nunito', sans-serif", display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
+                          <span style={{ fontSize: 20 }}>💌</span>
+                          <div>
+                            <div>Tell someone you trust</div>
+                            <div style={{ fontSize: 11, fontWeight: 400, color: "#7060a0", marginTop: 1 }}>One tap to reach out — we'll find the words</div>
+                          </div>
+                        </button>
+                        <button onClick={() => { setTab("night"); setCheckinSuggestions(null); }}
+                          style={{ padding: "13px 16px", borderRadius: 14, background: "#f4f8f2", border: "1px solid #deeeda", color: "#1e3820", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Nunito', sans-serif", display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
+                          <span style={{ fontSize: 20 }}>🌬️</span>
+                          <div>
+                            <div>Breathe through it</div>
+                            <div style={{ fontSize: 11, fontWeight: 400, color: "#7a9a7a", marginTop: 1 }}>Breathing and grounding techniques</div>
+                          </div>
+                        </button>
+                      </div>
+                      <button onClick={() => setCheckinSuggestions(null)}
+                        style={{ width: "100%", marginTop: 8, padding: "8px", borderRadius: 10, background: "transparent", border: "none", color: "#9aba98", fontSize: 12, cursor: "pointer", fontFamily: "'Nunito Sans', sans-serif" }}>
+                        I'll manage for now
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* LEVEL 3 — stress 8-10 or mood awful */}
+                {checkinSuggestions.type === "level3" && (
+                  <div style={{ background: "#fafcf8", border: "1.5px solid #c8b8e8", borderRadius: 20, overflow: "hidden" }}>
+                    <div style={{ height: 4, background: "linear-gradient(90deg, #a78bfa, #7c3aed)" }} />
+                    <div style={{ padding: "20px 18px 16px" }}>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: "#2a1a4a", fontFamily: "'Nunito', sans-serif", marginBottom: 6 }}>
+                        This is a really hard moment.
+                      </div>
+                      <div style={{ fontSize: 13, color: "#5a4a70", fontFamily: "'Nunito Sans', sans-serif", lineHeight: 1.7, marginBottom: 16 }}>
+                        Thank you for checking in. You matter. Please don't sit with this alone.
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                        <button onClick={() => { setShowCrisis(true); setCheckinSuggestions(null); }}
+                          style={{ padding: "14px 16px", borderRadius: 14, background: "linear-gradient(135deg, #34a853, #2a8a44)", border: "none", color: "white", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "'Nunito', sans-serif", display: "flex", alignItems: "center", gap: 10, textAlign: "left", boxShadow: "0 3px 12px rgba(52,168,83,0.3)" }}>
+                          <span style={{ fontSize: 22 }}>💙</span>
+                          <div>
+                            <div>Get support now</div>
+                            <div style={{ fontSize: 11, fontWeight: 400, color: "rgba(255,255,255,0.8)", marginTop: 1 }}>Crisis lines, 111, 999 — always free</div>
+                          </div>
+                        </button>
+                        <button onClick={() => { setTab("safetyplan"); setPlanSection(2); setCheckinSuggestions(null); }}
+                          style={{ padding: "13px 16px", borderRadius: 14, background: "linear-gradient(135deg, #f5f0ff, #ede8ff)", border: "1.5px solid #c8b8e8", color: "#2a1a4a", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Nunito', sans-serif", display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
+                          <span style={{ fontSize: 20 }}>🛡️</span>
+                          <div>
+                            <div>My safety plan — Level 3</div>
+                            <div style={{ fontSize: 11, fontWeight: 400, color: "#7060a0", marginTop: 1 }}>Your plan for crisis moments</div>
+                          </div>
+                        </button>
+                        <button onClick={() => { setTab("reachout"); setCheckinSuggestions(null); }}
+                          style={{ padding: "13px 16px", borderRadius: 14, background: "#f8f4ff", border: "1px solid #d0c4e8", color: "#3a2a5a", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Nunito', sans-serif", display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
+                          <span style={{ fontSize: 20 }}>💌</span>
+                          <div>
+                            <div>Reach out to someone now</div>
+                            <div style={{ fontSize: 11, fontWeight: 400, color: "#7060a0", marginTop: 1 }}>Tell someone you trust how you feel</div>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
               </div>
             )}
           </div>
