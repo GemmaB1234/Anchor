@@ -492,6 +492,8 @@ export default function MentalHealthTracker() {
   const [newActivity, setNewActivity] = useState({ emoji: "✨", label: "", interval: 2, unit: "h", reminder: false, color: "#22c55e" });
   const [reminderTicks, setReminderTicks] = useState({});
   const reminderRef = useRef({});
+  const lastScrollY = useRef(0);
+  const [headerVisible, setHeaderVisible] = useState(true);
   const [quoteIdx, setQuoteIdx] = useState(0);
   const [saved, setSaved] = useState(false);
   const [showCrisis, setShowCrisis] = useState(false);
@@ -513,6 +515,7 @@ export default function MentalHealthTracker() {
     distractions: "",
     supportPeople: "",
     professionalContacts: "",
+    crisisTeamNumber: "",
     safeEnvironment: "",
     reasons: "",
     level1: "",
@@ -527,6 +530,7 @@ export default function MentalHealthTracker() {
   const [nightMode, setNightMode] = useState("menu");
   const [nightText, setNightText] = useState("");
   const [nightStep, setNightStep] = useState(0);
+  const [storyIdx, setStoryIdx] = useState(0);
   const [reachOutPerson, setReachOutPerson] = useState(null);
   const [reachOutInputText, setReachOutInputText] = useState("");
   const [reachOutMode, setReachOutMode] = useState("choose");
@@ -712,8 +716,7 @@ export default function MentalHealthTracker() {
     const combinedLevel = Math.max(stressLevel, moodLevel);
 
     if (combinedLevel === 3) {
-      // Level 3 — crisis support + safety plan level 3 + reach out
-      setTimeout(() => setShowCrisis(true), 400);
+      // Level 3 — show full screen crisis routing — don't auto-open crisis modal
       setCheckinSuggestions({ type: "level3", planLevel: "level3" });
     } else if (combinedLevel === 2) {
       // Level 2 — safety plan level 2 + reach out
@@ -728,17 +731,19 @@ export default function MentalHealthTracker() {
       setCheckinSuggestions(null);
     }
 
-    // Escalation detection — last 3 check-ins
-    const allEntries = [entry, ...entries].slice(0, 10);
-    if (allEntries.length >= 3) {
-      const last3Stress = allEntries.slice(0, 3).filter(e => e.stress > 0).map(e => e.stress);
-      const last3Mood = allEntries.slice(0, 3).filter(e => e.mood > 0).map(e => e.mood);
-      const avgRecentStress = last3Stress.length ? last3Stress.reduce((a,b) => a+b, 0) / last3Stress.length : 0;
-      const avgRecentMood = last3Mood.length ? last3Mood.reduce((a,b) => a+b, 0) / last3Mood.length : 5;
-      if (avgRecentStress >= 8 || avgRecentMood <= 1.5) {
-        setTimeout(() => setEscalationAlert("urgent"), 600);
-      } else if (avgRecentStress >= 6.5 || avgRecentMood <= 2.5) {
-        setTimeout(() => setEscalationAlert("gp"), 600);
+    // Escalation detection — last 3 check-ins — only if not already at level 3
+    if (combinedLevel < 3) {
+      const allEntries = [entry, ...entries].slice(0, 10);
+      if (allEntries.length >= 3) {
+        const last3Stress = allEntries.slice(0, 3).filter(e => e.stress > 0).map(e => e.stress);
+        const last3Mood = allEntries.slice(0, 3).filter(e => e.mood > 0).map(e => e.mood);
+        const avgRecentStress = last3Stress.length ? last3Stress.reduce((a,b) => a+b, 0) / last3Stress.length : 0;
+        const avgRecentMood = last3Mood.length ? last3Mood.reduce((a,b) => a+b, 0) / last3Mood.length : 5;
+        if (avgRecentStress >= 8 || avgRecentMood <= 1.5) {
+          setTimeout(() => setEscalationAlert("urgent"), 600);
+        } else if (avgRecentStress >= 6.5 || avgRecentMood <= 2.5) {
+          setTimeout(() => setEscalationAlert("gp"), 600);
+        }
       }
     }
   };
@@ -923,13 +928,12 @@ export default function MentalHealthTracker() {
 
   const handleOpeningMood = (mood) => {
     setOpeningMood(mood);
-    // Brief pause so they see the confirmation message, then navigate
-    setTimeout(() => {
-      setTab(mood.route);
-      // Also pre-set the check-in mood if they tapped one
-      const moodMap = { "🌤": 4, "🌧": 2, "⛈": 1 };
-      if (moodMap[mood.emoji]) setMood(moodMap[mood.emoji]);
-    }, 1200);
+    // Navigate immediately — don't wait
+    setTab(mood.route);
+    const moodMap = { "🌤": 4, "🌧": 2, "⛈": 1 };
+    if (moodMap[mood.emoji]) setMood(moodMap[mood.emoji]);
+    // Clear opening mood after a short delay so the screen doesn't get stuck
+    setTimeout(() => setOpeningMood("done"), 100);
   };
 
   const WELCOME_SLIDES = [
@@ -978,7 +982,7 @@ export default function MentalHealthTracker() {
   );
 
   // Opening mood screen — shown every session after onboarding
-  if (onboardingDone && !openingMood) return (
+  if (onboardingDone && openingMood === null) return (
     <div style={{ minHeight: "100vh", background: "linear-gradient(160deg, #f6f9f4 0%, #eef6ec 100%)", fontFamily: "'Nunito Sans', sans-serif", display: "flex", flexDirection: "column" }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400;1,700&family=Nunito+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap'); * { box-sizing: border-box; } @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } } .mood-card { animation: fadeIn 0.4s ease both; }`}</style>
       <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between", padding: "52px 24px 40px" }}>
@@ -1044,19 +1048,6 @@ export default function MentalHealthTracker() {
           >
             Skip and go straight in
           </button>
-        </div>
-      </div>
-    </div>
-  );
-
-  // Brief confirmation message while routing
-  if (openingMood && tab === "checkin" && openingMood.route !== "checkin" && openingMood.message) return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(160deg, #f6f9f4, #eef6ec)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32 }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Nunito+Sans:wght@400;600&display=swap'); * { box-sizing: border-box; } @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }`}</style>
-      <div style={{ textAlign: "center", animation: "fadeIn 0.4s ease" }}>
-        <div style={{ fontSize: 48, marginBottom: 20 }}>{openingMood.emoji}</div>
-        <div style={{ fontSize: 20, fontFamily: "'Nunito', sans-serif", fontWeight: 800, color: "#1a3820", lineHeight: 1.4, maxWidth: 280 }}>
-          {openingMood.message}
         </div>
       </div>
     </div>
@@ -1189,16 +1180,20 @@ export default function MentalHealthTracker() {
   }
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      background: "linear-gradient(160deg, #f6f9f4 0%, #f0f6ee 40%, #f4f8f2 100%)",
-      fontFamily: "'Nunito Sans', sans-serif",
-      color: "#1a3a1a",
-      display: "flex",
-      flexDirection: "column",
-      maxWidth: 480,
-      margin: "0 auto",
-    }}>
+    <div
+      style={{
+        height: "100vh",
+        background: "linear-gradient(160deg, #f6f9f4 0%, #f0f6ee 40%, #f4f8f2 100%)",
+        fontFamily: "'Nunito Sans', sans-serif",
+        color: "#1a3a1a",
+        display: "flex",
+        flexDirection: "column",
+        maxWidth: 480,
+        margin: "0 auto",
+        overflowY: "auto",
+      }}
+    >
+
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400;1,700&family=Nunito+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap');
         * { box-sizing: border-box; }
@@ -1223,112 +1218,69 @@ export default function MentalHealthTracker() {
         @keyframes shimmer { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
       `}</style>
 
-      {/* Header */}
-      <div style={{ padding: "24px 24px 10px", position: "sticky", top: 0, zIndex: 10, background: "linear-gradient(to bottom, #f6f9f4 94%, transparent)" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-          <div>
-            <div style={{ fontSize: 9, color: "#7aaa7a", fontFamily: "'DM Mono', monospace", letterSpacing: 2, marginBottom: 3 }}>{today.toUpperCase()}</div>
-            {profile?.greetings ? (
-              <div style={{ fontSize: profile.greetings[new Date().getDay() % profile.greetings.length].length > 32 ? 15 : 18,
-                fontFamily: "'Nunito', sans-serif", fontWeight: 800, color: "#2a4a2a",
-                lineHeight: 1.3, maxWidth: 220 }}>
-                {profile.greetings[new Date().getDay() % profile.greetings.length]}
-              </div>
-            ) : (
-              <div style={{ fontSize: 26, fontFamily: "'Nunito', sans-serif", fontWeight: 900, color: "#2d6a2d", lineHeight: 1.1 }}>How are you<br /><span style={{ fontStyle: "italic", fontWeight: 400, color: "#4a8a4a" }}>really?</span></div>
-            )}
+      {/* Header + coming soon + tabs — compact static */}
+      <div style={{
+        position: "sticky", top: 0, zIndex: 10,
+        background: "#f6f9f4",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+      }}>
+        {/* Compact top bar */}
+        <div style={{ padding: "8px 16px 6px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          {/* Left — date + greeting */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 8, color: "#7aaa7a", fontFamily: "'DM Mono', monospace", letterSpacing: 2 }}>{today.toUpperCase()}</div>
+            <div style={{ fontSize: 15, fontFamily: "'Nunito', sans-serif", fontWeight: 800, color: "#2a4a2a", lineHeight: 1.2, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 180 }}>
+              {profile?.greetings
+                ? profile.greetings[new Date().getDay() % profile.greetings.length]
+                : "How are you really?"}
+            </div>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+
+          {/* Right — Anchor brand + buttons in one row */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
             <a href="https://www.wiredandwell.co.uk" target="_blank" rel="noopener noreferrer"
-              style={{ textDecoration: "none", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 1 }}>
-              <div style={{ fontSize: 17, fontFamily: "'Nunito', sans-serif", fontWeight: 800, color: "#5a8a5a", letterSpacing: 0.5 }}>Anchor</div>
-              <div style={{ fontSize: 8, color: "#9aca9a", fontFamily: "'DM Mono', monospace", letterSpacing: 1 }}>Wired &amp; Well</div>
+              style={{ textDecoration: "none", display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
+              <div style={{ fontSize: 14, fontFamily: "'Nunito', sans-serif", fontWeight: 800, color: "#5a8a5a" }}>Anchor</div>
+              <div style={{ fontSize: 7, color: "#9aca9a", fontFamily: "'DM Mono', monospace", letterSpacing: 1 }}>Wired &amp; Well</div>
             </a>
-            <button
-              onClick={() => {
-                localStorage.removeItem("mh_profile");
-                setProfile(null);
-                setOnboardingDone(false);
-                setWelcomePage(1);
-              }}
-              style={{ background: "none", border: "none", fontSize: 9, color: "#c8dcc8", cursor: "pointer",
-                fontFamily: "'DM Mono', monospace", letterSpacing: 0.5, padding: 0 }}>
-              preview intro
-            </button>
             <button onClick={() => currentUser ? setShowAccount(true) : setAuthScreen("signup")}
-              style={{ padding: "6px 12px", borderRadius: 20, border: "1px solid #c8e4c0",
-                background: currentUser ? "#e4f5e0" : "#f0f7ee",
-                color: "#2a5a2a", fontSize: 11, fontWeight: 700, cursor: "pointer",
-                fontFamily: "'Nunito', sans-serif", whiteSpace: "nowrap" }}>
+              style={{ padding: "5px 10px", borderRadius: 16, border: "1px solid #c8e4c0", background: currentUser ? "#e4f5e0" : "#f0f7ee", color: "#2a5a2a", fontSize: 10, fontWeight: 700, cursor: "pointer", fontFamily: "'Nunito', sans-serif", whiteSpace: "nowrap" }}>
               {currentUser ? `👤 ${currentUser.name.split(" ")[0]}` : "Sign in"}
             </button>
+            <a href="mailto:hello@wiredandwell.co.uk?subject=Anchor Feedback&body=What I love about Anchor:%0A%0AWhat could be better:%0A%0AAny bugs or issues:%0A%0AOverall rating (1-10):" target="_blank" rel="noopener noreferrer"
+              style={{ padding: "5px 8px", borderRadius: 16, border: "1px solid #c8e4c0", background: "#f0f7ee", color: "#5a8a5a", fontSize: 11, cursor: "pointer", textDecoration: "none" }}>
+              💬
+            </a>
           </div>
         </div>
-      </div>
 
-      {/* Coming Soon banner */}
-      <div style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8a)", padding: "8px 16px", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-        <span style={{ fontSize: 14 }}>🚀</span>
-        <div style={{ fontSize: 11, color: "#a8d4f8", fontFamily: "'Nunito', sans-serif", fontWeight: 600, textAlign: "center" }}>
-          Anchor is in beta — accounts &amp; cloud sync <span style={{ color: "#fbbf24", fontWeight: 800 }}>coming soon</span>
+        {/* Coming soon — slim */}
+        <div style={{ background: "linear-gradient(135deg, #1e3a5f, #2d5a8a)", padding: "5px 16px", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+          <span style={{ fontSize: 11 }}>🚀</span>
+          <div style={{ fontSize: 10, color: "#a8d4f8", fontFamily: "'Nunito', sans-serif", fontWeight: 600 }}>
+            Beta — cloud sync &amp; accounts <span style={{ color: "#fbbf24", fontWeight: 800 }}>coming soon</span>
+          </div>
         </div>
-      </div>
 
-      {/* Tab Navigation — fixed bottom bar, 5 visible + swipe overflow */}
-      <div style={{ position: "relative", borderBottom: "1px solid #e8f0e4", background: "#f6f9f4" }}>
-        {/* Scrollable emoji row */}
-        <div style={{
-          display: "flex", gap: 0, overflowX: "auto", scrollbarWidth: "none",
-          WebkitOverflowScrolling: "touch", padding: "6px 8px 0",
-        }}>
-          {TABS.map(t => (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              style={{
-                flex: "0 0 auto",
-                minWidth: 60,
-                padding: "8px 4px 10px",
-                border: "none",
-                background: "transparent",
-                cursor: "pointer",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 4,
-                position: "relative",
-              }}
-            >
-              {/* Active indicator dot above emoji */}
-              {tab === t.id && (
-                <div style={{
-                  position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)",
-                  width: 20, height: 3, borderRadius: 2,
-                  background: "linear-gradient(90deg, #34a853, #22c55e)",
-                }} />
-              )}
-              <span style={{ fontSize: tab === t.id ? 22 : 20, transition: "font-size 0.15s" }}>{t.emoji}</span>
-              <span style={{
-                fontSize: 9, fontFamily: "'Nunito', sans-serif",
-                fontWeight: tab === t.id ? 800 : 500,
-                color: tab === t.id ? "#2a5a2a" : "#9aba90",
-                whiteSpace: "nowrap",
-                transition: "all 0.15s",
-              }}>{t.label}</span>
-            </button>
-          ))}
-          <div style={{ flex: "0 0 12px" }} />
+        {/* Tab grid */}
+        <div style={{ borderBottom: "1px solid #e8f0e4", background: "#f6f9f4", padding: "4px 8px 3px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "2px 0" }}>
+            {TABS.map(t => (
+              <button key={t.id} onClick={() => setTab(t.id)}
+                style={{ padding: "5px 2px 6px", border: "none", background: tab === t.id ? "rgba(52,168,83,0.08)" : "transparent", borderRadius: 10, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, position: "relative", transition: "background 0.15s" }}>
+                {tab === t.id && (
+                  <div style={{ position: "absolute", top: 0, left: "20%", right: "20%", height: 2, borderRadius: 2, background: "linear-gradient(90deg, #34a853, #22c55e)" }} />
+                )}
+                <span style={{ fontSize: tab === t.id ? 19 : 17, transition: "font-size 0.15s" }}>{t.emoji}</span>
+                <span style={{ fontSize: 8, fontFamily: "'Nunito', sans-serif", fontWeight: tab === t.id ? 800 : 500, color: tab === t.id ? "#2a5a2a" : "#9aba90", whiteSpace: "nowrap" }}>{t.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
-        {/* Right fade — signals scrollability */}
-        <div style={{
-          position: "absolute", top: 0, right: 0, bottom: 0, width: 52,
-          background: "linear-gradient(to left, #f6f9f4 20%, transparent)",
-          pointerEvents: "none",
-        }} />
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, padding: "16px 20px 100px", overflowY: "auto" }}>
+      <div style={{ flex: 1, padding: "16px 20px 100px" }}>
 
         {/* CHECK IN TAB */}
         {tab === "checkin" && (
@@ -1616,43 +1568,108 @@ export default function MentalHealthTracker() {
                   </div>
                 )}
 
-                {/* LEVEL 3 — stress 8-10 or mood awful */}
+                {/* LEVEL 3 — stress 8-10 or mood awful — FULL SCREEN so it can't be missed */}
                 {checkinSuggestions.type === "level3" && (
-                  <div style={{ background: "#fafcf8", border: "1.5px solid #c8b8e8", borderRadius: 20, overflow: "hidden" }}>
-                    <div style={{ height: 4, background: "linear-gradient(90deg, #a78bfa, #7c3aed)" }} />
-                    <div style={{ padding: "20px 18px 16px" }}>
-                      <div style={{ fontSize: 15, fontWeight: 800, color: "#2a1a4a", fontFamily: "'Nunito', sans-serif", marginBottom: 6 }}>
-                        This is a really hard moment.
+                  <div style={{ position: "fixed", inset: 0, zIndex: 400, background: "linear-gradient(160deg, #1a0a2e 0%, #2a1a4a 50%, #1a0a2e 100%)", display: "flex", flexDirection: "column", overflowY: "auto" }}>
+                    <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "52px 24px 40px", maxWidth: 440, margin: "0 auto", width: "100%" }}>
+
+                      {/* Pulsing heart */}
+                      <div style={{ textAlign: "center", marginBottom: 28 }}>
+                        <div style={{ fontSize: 52, marginBottom: 16 }}>💙</div>
+                        <div style={{ fontSize: 22, fontWeight: 900, color: "#ffffff", fontFamily: "'Nunito', sans-serif", lineHeight: 1.3, marginBottom: 12 }}>
+                          This is a really hard moment.
+                        </div>
+                        <div style={{ fontSize: 15, color: "#c8b8e8", fontFamily: "'Nunito Sans', sans-serif", lineHeight: 1.8 }}>
+                          Thank you for telling us. You matter — and you don't have to sit with this alone.
+                        </div>
                       </div>
-                      <div style={{ fontSize: 13, color: "#5a4a70", fontFamily: "'Nunito Sans', sans-serif", lineHeight: 1.7, marginBottom: 16 }}>
-                        Thank you for checking in. You matter. Please don't sit with this alone.
+
+                      {/* Personal crisis team number — shown if saved */}
+                      {safetyPlan?.crisisTeamNumber?.trim() ? (
+                        <div style={{ background: "linear-gradient(135deg, #1e3a5f, #2a4a6a)", border: "1.5px solid #60a5fa", borderRadius: 18, padding: "16px 18px", marginBottom: 12 }}>
+                          <div style={{ fontSize: 11, color: "#93c5fd", fontFamily: "'DM Mono', monospace", letterSpacing: 2, marginBottom: 6 }}>YOUR CRISIS TEAM</div>
+                          <div style={{ fontSize: 13, color: "#dbeafe", fontFamily: "'Nunito Sans', sans-serif", marginBottom: 10, lineHeight: 1.6 }}>
+                            You already have people supporting you. Call them now.
+                          </div>
+                          <a href={`tel:${safetyPlan.crisisTeamNumber.replace(/\s/g, "")}`}
+                            style={{ display: "flex", alignItems: "center", gap: 12, textDecoration: "none", background: "#1e40af", borderRadius: 12, padding: "12px 16px" }}>
+                            <span style={{ fontSize: 22 }}>📞</span>
+                            <div>
+                              <div style={{ fontSize: 16, fontWeight: 800, color: "white", letterSpacing: 1 }}>{safetyPlan.crisisTeamNumber}</div>
+                              <div style={{ fontSize: 11, color: "#93c5fd", marginTop: 2 }}>Tap to call your crisis team</div>
+                            </div>
+                          </a>
+                        </div>
+                      ) : (
+                        <div style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(96,165,250,0.3)", borderRadius: 16, padding: "14px 16px", marginBottom: 12 }}>
+                          <div style={{ fontSize: 12, color: "#93c5fd", fontFamily: "'Nunito Sans', sans-serif", lineHeight: 1.7, marginBottom: 8 }}>
+                            Under a crisis team? Add their number to your safety plan so it appears here when you need it most.
+                          </div>
+                          <button onClick={() => { setTab("safetyplan"); setCheckinSuggestions(null); }}
+                            style={{ background: "rgba(96,165,250,0.2)", border: "1px solid rgba(96,165,250,0.4)", borderRadius: 10, padding: "8px 14px", color: "#93c5fd", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Nunito', sans-serif" }}>
+                            Add crisis team number →
+                          </button>
+                        </div>
+                      )}
+
+                      {/* 999 and 111 option 2 */}
+                      <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                        <a href="tel:999"
+                          style={{ flex: 1, background: "linear-gradient(135deg, #dc2626, #b91c1c)", borderRadius: 14, padding: "14px 12px", textDecoration: "none", textAlign: "center" }}>
+                          <div style={{ fontSize: 20, fontWeight: 900, color: "white", letterSpacing: 1 }}>999</div>
+                          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.8)", marginTop: 3, fontFamily: "'Nunito Sans', sans-serif" }}>Emergency</div>
+                        </a>
+                        <a href="tel:111"
+                          style={{ flex: 1, background: "linear-gradient(135deg, #2563eb, #1d4ed8)", borderRadius: 14, padding: "14px 12px", textDecoration: "none", textAlign: "center" }}>
+                          <div style={{ fontSize: 20, fontWeight: 900, color: "white", letterSpacing: 1 }}>111</div>
+                          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.8)", marginTop: 3, fontFamily: "'Nunito Sans', sans-serif" }}>Option 2 — Mental health</div>
+                        </a>
+                        <a href="tel:116123"
+                          style={{ flex: 1, background: "linear-gradient(135deg, #059669, #047857)", borderRadius: 14, padding: "14px 12px", textDecoration: "none", textAlign: "center" }}>
+                          <div style={{ fontSize: 20, fontWeight: 900, color: "white", letterSpacing: 1 }}>116 123</div>
+                          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.8)", marginTop: 3, fontFamily: "'Nunito Sans', sans-serif" }}>Samaritans 24/7</div>
+                        </a>
                       </div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                        <button onClick={() => { setShowCrisis(true); setCheckinSuggestions(null); }}
-                          style={{ padding: "14px 16px", borderRadius: 14, background: "linear-gradient(135deg, #34a853, #2a8a44)", border: "none", color: "white", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "'Nunito', sans-serif", display: "flex", alignItems: "center", gap: 10, textAlign: "left", boxShadow: "0 3px 12px rgba(52,168,83,0.3)" }}>
-                          <span style={{ fontSize: 22 }}>💙</span>
-                          <div>
-                            <div>Get support now</div>
-                            <div style={{ fontSize: 11, fontWeight: 400, color: "rgba(255,255,255,0.8)", marginTop: 1 }}>Crisis lines, 111, 999 — always free</div>
-                          </div>
-                        </button>
-                        <button onClick={() => { setTab("safetyplan"); setPlanSection(2); setCheckinSuggestions(null); }}
-                          style={{ padding: "13px 16px", borderRadius: 14, background: "linear-gradient(135deg, #f5f0ff, #ede8ff)", border: "1.5px solid #c8b8e8", color: "#2a1a4a", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Nunito', sans-serif", display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
-                          <span style={{ fontSize: 20 }}>🛡️</span>
-                          <div>
-                            <div>My safety plan — Level 3</div>
-                            <div style={{ fontSize: 11, fontWeight: 400, color: "#7060a0", marginTop: 1 }}>Your plan for crisis moments</div>
-                          </div>
-                        </button>
-                        <button onClick={() => { setTab("reachout"); setCheckinSuggestions(null); }}
-                          style={{ padding: "13px 16px", borderRadius: 14, background: "#f8f4ff", border: "1px solid #d0c4e8", color: "#3a2a5a", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Nunito', sans-serif", display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
-                          <span style={{ fontSize: 20 }}>💌</span>
-                          <div>
-                            <div>Reach out to someone now</div>
-                            <div style={{ fontSize: 11, fontWeight: 400, color: "#7060a0", marginTop: 1 }}>Tell someone you trust how you feel</div>
-                          </div>
-                        </button>
-                      </div>
+
+                      {/* Crisis support screen */}
+                      <button onClick={() => { setShowCrisis(true); setCheckinSuggestions(null); }}
+                        style={{ width: "100%", padding: "16px 20px", borderRadius: 16, background: "linear-gradient(135deg, #34a853, #2a8a44)", border: "none", color: "white", cursor: "pointer", fontFamily: "'Nunito', sans-serif", display: "flex", alignItems: "center", gap: 14, marginBottom: 10, boxShadow: "0 4px 20px rgba(52,168,83,0.3)", textAlign: "left" }}>
+                        <span style={{ fontSize: 22, flexShrink: 0 }}>🆘</span>
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 2 }}>More crisis support</div>
+                          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.85)", lineHeight: 1.5 }}>Shout, CALM, Papyrus and more</div>
+                        </div>
+                      </button>
+
+                      {/* Safety plan */}
+                      <button onClick={() => {
+                        setCheckinSuggestions(null);
+                        setShowCrisis(false);
+                        setPlanSection(2);
+                        setTab("safetyplan");
+                        window.scrollTo(0, 0);
+                      }}
+                        style={{ width: "100%", padding: "14px 20px", borderRadius: 16, background: "rgba(255,255,255,0.08)", border: "1.5px solid rgba(200,184,232,0.3)", color: "white", cursor: "pointer", fontFamily: "'Nunito', sans-serif", display: "flex", alignItems: "center", gap: 14, marginBottom: 10, textAlign: "left" }}>
+                        <span style={{ fontSize: 22, flexShrink: 0 }}>🛡️</span>
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 2 }}>Open my crisis plan</div>
+                          <div style={{ fontSize: 11, color: "rgba(200,184,232,0.8)" }}>Your Level 3 safety plan — written by you for this moment</div>
+                        </div>
+                      </button>
+
+                      {/* Reach out — smaller, less prominent */}
+                      <button onClick={() => { setTab("reachout"); setCheckinSuggestions(null); }}
+                        style={{ width: "100%", padding: "12px 20px", borderRadius: 14, background: "transparent", border: "1px solid rgba(200,184,232,0.15)", color: "rgba(200,184,232,0.7)", cursor: "pointer", fontFamily: "'Nunito', sans-serif", display: "flex", alignItems: "center", gap: 12, marginBottom: 20, textAlign: "left" }}>
+                        <span style={{ fontSize: 18, flexShrink: 0 }}>💌</span>
+                        <div style={{ fontSize: 12 }}>Tell someone you trust</div>
+                      </button>
+
+                      {/* Dismiss */}
+                      <button onClick={() => setCheckinSuggestions(null)}
+                        style={{ background: "transparent", border: "none", color: "rgba(200,184,232,0.4)", fontSize: 12, cursor: "pointer", fontFamily: "'Nunito Sans', sans-serif", padding: "8px", textAlign: "center" }}>
+                        I'm safe right now — go back to the app
+                      </button>
+
                     </div>
                   </div>
                 )}
@@ -2475,7 +2492,7 @@ export default function MentalHealthTracker() {
         })()}
         {/* NIGHT MODE TAB */}
         {tab === "night" && (() => {
-          const STEPS = [
+          const SETTLE_STEPS = [
             { emoji: "🌙", title: "You're safe right now.", body: "Wherever you are, whatever your mind is doing — you are physically safe in this moment. Let's just start there.", action: "I hear you" },
             { emoji: "👂", title: "Name 3 things you can hear.", body: "Don't try to sleep. Don't try to think less. Just listen. The hum of something. A sound outside. Your own breathing.", action: "I found them" },
             { emoji: "🤲", title: "Feel where your body touches the bed.", body: "Your heels. The back of your legs. Your shoulders. Your head. Notice the weight of you. Just notice.", action: "I can feel it" },
@@ -2483,70 +2500,160 @@ export default function MentalHealthTracker() {
             { emoji: "🌿", title: "Your thoughts are not facts.", body: "Whatever is circling right now — it feels urgent, but it doesn't need solving tonight. It will still be there in the morning.", action: "I know" },
             { emoji: "🌙", title: "You made it through.", body: "That matters. Even if you're still awake. You reached out instead of spiralling alone. That was the right thing to do.", action: "Close ♡" },
           ];
-          const step = STEPS[Math.min(nightStep, STEPS.length - 1)];
+
+          const PMR_STEPS = [
+            { emoji: "🦶", title: "Start with your feet.", body: "Curl your toes tightly for 5 seconds. Feel the tension. Then let go completely. Notice the difference.", action: "Released →" },
+            { emoji: "🦵", title: "Now your calves and thighs.", body: "Squeeze your leg muscles hard for 5 seconds. Hold it. Then let everything go limp. Feel them sink into the bed.", action: "Released →" },
+            { emoji: "🍑", title: "Hips and stomach.", body: "Tighten your stomach and squeeze your glutes. Hold for 5 seconds. Then let go. Feel the warmth.", action: "Released →" },
+            { emoji: "✋", title: "Hands and arms.", body: "Make tight fists, squeeze your forearms. Hold for 5 seconds. Open your hands slowly and let your arms go heavy.", action: "Released →" },
+            { emoji: "🫱", title: "Shoulders and neck.", body: "Shrug your shoulders up to your ears, hold them there. 5 seconds. Then drop them slowly. Roll your neck gently.", action: "Released →" },
+            { emoji: "😤", title: "Your face.", body: "Scrunch your face — squeeze your eyes, clench your jaw. 5 seconds. Then let your face soften completely. Lips slightly apart.", action: "Released →" },
+            { emoji: "✨", title: "Your whole body is heavy now.", body: "From your feet to your face — let everything sink. You are heavy, warm, and safe. Let your eyes stay closed.", action: "Rest now ♡" },
+          ];
+
+          const RACING_THOUGHTS_STEPS = [
+            { emoji: "🌀", title: "Thoughts are spinning. That's okay.", body: "Your brain is trying to solve problems. It thinks it's helping. You don't have to fight it — just let it know it can rest.", action: "Okay →" },
+            { emoji: "📋", title: "Do a brain dump.", body: "Grab a thought — any thought — and say it out loud or write it below. You don't need to solve it. Just name it.", action: "Named it →", hasInput: true },
+            { emoji: "📦", title: "Now put it in a box.", body: "Imagine yourself placing that thought in a box. Close the lid. Put it on a shelf. It will be there tomorrow if you need it. You don't need it tonight.", action: "Boxed →" },
+            { emoji: "🔁", title: "Repeat until quieter.", body: "Another thought circling? Name it. Box it. Shelf it. You can keep going as long as you need to.", action: "Keep going →", hasInput: true },
+            { emoji: "🌊", title: "Now just observe.", body: "Don't catch the thoughts. Don't follow them. Imagine them as clouds moving across a sky. You are the sky — not the clouds.", action: "I see them →" },
+            { emoji: "💤", title: "Let yourself drift.", body: "You don't have to fall asleep. You just have to rest. That's enough. That's more than enough.", action: "Rest now ♡" },
+          ];
+
+          const WIND_DOWN_STEPS = [
+            { emoji: "📵", title: "Phone down after this.", body: "This screen is the last thing. When we're done, put the phone face down. You've given your mind enough to process today.", action: "Agreed →" },
+            { emoji: "🌡️", title: "Is the room cool enough?", body: "Your body temperature drops to sleep. If you can, open a window slightly or move the duvet. Cool = sleep signal.", action: "Sorted →" },
+            { emoji: "🫁", title: "4-7-8 breathing.", body: "Breathe in for 4. Hold for 7. Out for 8. This activates your parasympathetic nervous system — your 'rest and digest' mode.", action: "Done →" },
+            { emoji: "📝", title: "Write tomorrow's first task.", body: "Just one. The very first thing you'll do tomorrow. Writing it down tells your brain it's safe to let go of the planning.", action: "Written →", hasInput: true },
+            { emoji: "🙏", title: "One thing from today.", body: "Not the best thing. Just one thing that existed today. A cup of tea. A moment of quiet. Anything. This anchors you to the present.", action: "Got one →" },
+            { emoji: "🌙", title: "You're ready to rest.", body: "You've done enough today. You are enough. The morning will come. Tonight, you just have to breathe.", action: "Goodnight ♡" },
+          ];
+
+          const STORY_SCENES = [
+            { emoji: "🌲", title: "A path through the forest.", body: "You're walking slowly along a path through tall, ancient trees. The light is soft and green. Your feet are quiet on the ground. There is no destination. Just the next step, and the next." },
+            { emoji: "🌊", title: "A beach at evening.", body: "You're sitting at the edge of the water. The tide is coming in slowly. Each wave reaches a little further and then pulls back. You breathe in with each wave, out as it retreats. The sky is turning from orange to deep blue." },
+            { emoji: "🏡", title: "A warm room in winter.", body: "You're in a small, warm room. Rain against the window. A single lamp. A blanket that's been warmed. There is nowhere to be. Nothing to do. You are completely safe here." },
+            { emoji: "☁️", title: "Floating on clouds.", body: "You are lying on something impossibly soft, impossibly white. The sky above is the deepest blue you've ever seen. You are completely supported. You cannot fall. You are just floating, slowly, gently." },
+          ];
+
+          
+          const step = nightMode === "settle" ? SETTLE_STEPS[Math.min(nightStep, SETTLE_STEPS.length-1)]
+            : nightMode === "pmr" ? PMR_STEPS[Math.min(nightStep, PMR_STEPS.length-1)]
+            : nightMode === "racing" ? RACING_THOUGHTS_STEPS[Math.min(nightStep, RACING_THOUGHTS_STEPS.length-1)]
+            : nightMode === "winddown" ? WIND_DOWN_STEPS[Math.min(nightStep, WIND_DOWN_STEPS.length-1)]
+            : null;
+          const currentSteps = nightMode === "settle" ? SETTLE_STEPS : nightMode === "pmr" ? PMR_STEPS : nightMode === "racing" ? RACING_THOUGHTS_STEPS : nightMode === "winddown" ? WIND_DOWN_STEPS : [];
+
           return (
-            <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 0, background: "linear-gradient(180deg, #0a0a1a 0%, #0f1028 100%)", margin: "-20px -20px 0", padding: "20px", minHeight: "80vh" }}>
+
+              {/* MENU */}
               {nightMode === "menu" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   <div style={{ textAlign: "center", padding: "16px 8px 8px" }}>
                     <div style={{ fontSize: 40, marginBottom: 10 }}>🌙</div>
-                    <div style={{ fontSize: 22, fontFamily: "'Nunito', sans-serif", fontWeight: 800, color: "#2a3a4a", marginBottom: 8 }}>Can't sleep?</div>
-                    <div style={{ fontSize: 14, color: "#6a8090", fontFamily: "'Nunito Sans', sans-serif", lineHeight: 1.7 }}>That restless, racing, won't-stop-spinning feeling. You don't have to lie there fighting it alone.</div>
+                    <div style={{ fontSize: 22, fontFamily: "'Nunito', sans-serif", fontWeight: 800, color: "#e8e0f8", marginBottom: 8 }}>Can't sleep?</div>
+                    <div style={{ fontSize: 14, color: "#9090b8", fontFamily: "'Nunito Sans', sans-serif", lineHeight: 1.7 }}>That restless, racing, won't-stop-spinning feeling. You don't have to lie there fighting it alone.</div>
                   </div>
+
                   {[
-                    { mode: "settle", emoji: "🌊", title: "Settle my thoughts", desc: "A gentle stepped guide to slow the spiral. No effort needed.", bg: "#f0f6ff", border: "#c8d8f0", titleColor: "#2a3a6a", descColor: "#6070a0" },
-                    { mode: "ramble", emoji: "✍️", title: "Get it out of my head", desc: "Just write. Anything. No one reads it. Sometimes naming it loosens the grip.", bg: "#f5f0ff", border: "#c8b8e8", titleColor: "#4a2a6a", descColor: "#7060a0" },
+                    { mode: "settle", emoji: "🌊", title: "Settle my thoughts", desc: "A gentle 6-step guide to slow the spiral. No effort needed.", color: "#5580cc" },
+                    { mode: "pmr", emoji: "💆", title: "Relax my body", desc: "Progressive muscle relaxation — tense and release from feet to face.", color: "#7060b0" },
+                    { mode: "racing", emoji: "🌀", title: "My thoughts won't stop", desc: "Brain dump and box technique for racing thoughts.", color: "#a060a0" },
+                    { mode: "winddown", emoji: "🕯️", title: "Wind-down routine", desc: "A gentle bedtime sequence to signal sleep to your brain.", color: "#4a80a0" },
+                    { mode: "story", emoji: "☁️", title: "Take me somewhere peaceful", desc: "Guided scenes to drift away to. No plot. No effort.", color: "#406080" },
+                    { mode: "ramble", emoji: "✍️", title: "Get it out of my head", desc: "Just write. Anything. No one reads it.", color: "#5a4a8a" },
                   ].map(opt => (
-                    <div key={opt.mode} onClick={() => { setNightMode(opt.mode); setNightStep(0); }}
-                      style={{ background: opt.bg, border: `1px solid ${opt.border}`, borderRadius: 18, padding: "18px 20px", cursor: "pointer" }}>
-                      <div style={{ fontSize: 24, marginBottom: 8 }}>{opt.emoji}</div>
-                      <div style={{ fontSize: 15, fontWeight: 800, color: opt.titleColor, fontFamily: "'Nunito', sans-serif", marginBottom: 4 }}>{opt.title}</div>
-                      <div style={{ fontSize: 13, color: opt.descColor, fontFamily: "'Nunito Sans', sans-serif", lineHeight: 1.5 }}>{opt.desc}</div>
+                    <div key={opt.mode} onClick={() => { setNightMode(opt.mode); setNightStep(0); window.scrollTo(0, 0); }}
+                      style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${opt.color}40`, borderRadius: 16, padding: "16px 18px", cursor: "pointer", display: "flex", alignItems: "center", gap: 14 }}>
+                      <div style={{ width: 44, height: 44, borderRadius: 14, background: `${opt.color}25`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>{opt.emoji}</div>
+                      <div>
+                        <div style={{ fontSize: 15, fontWeight: 800, color: "#e8e0f8", fontFamily: "'Nunito', sans-serif", marginBottom: 3 }}>{opt.title}</div>
+                        <div style={{ fontSize: 12, color: "#8080a8", fontFamily: "'Nunito Sans', sans-serif", lineHeight: 1.4 }}>{opt.desc}</div>
+                      </div>
                     </div>
                   ))}
+
                   <div onClick={() => setTab("breathe")}
-                    style={{ background: "#f0fdf4", border: "1px solid #b8ddc8", borderRadius: 16, padding: "14px 18px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12 }}>
-                    <span style={{ fontSize: 24 }}>🌬️</span>
-                    <div><div style={{ fontSize: 14, fontWeight: 700, color: "#1a4a2a", fontFamily: "'Nunito', sans-serif" }}>Breathe with me</div>
-                    <div style={{ fontSize: 12, color: "#5a8a6a", fontFamily: "'Nunito Sans', sans-serif" }}>Go to the breathing guide</div></div>
+                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid #4a6a5a40", borderRadius: 14, padding: "13px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12 }}>
+                    <span style={{ fontSize: 20 }}>🌬️</span>
+                    <div style={{ fontSize: 13, color: "#80a890", fontFamily: "'Nunito Sans', sans-serif" }}>Breathing techniques</div>
                   </div>
                   <div onClick={() => setShowCrisis(true)}
-                    style={{ background: "#fff8f8", border: "1px solid #f0cac8", borderRadius: 14, padding: "13px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{ fontSize: 18 }}>💙</span>
-                    <div style={{ fontSize: 13, color: "#8a4040", fontFamily: "'Nunito Sans', sans-serif" }}>This feels like more than not sleeping — I need support</div>
+                    style={{ background: "rgba(255,255,255,0.03)", border: "1px solid #5a304040", borderRadius: 14, padding: "12px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 16 }}>💙</span>
+                    <div style={{ fontSize: 12, color: "#906868", fontFamily: "'Nunito Sans', sans-serif" }}>This feels like more than not sleeping — I need support</div>
                   </div>
                 </div>
               )}
-              {nightMode === "settle" && (
-                <div style={{ display: "flex", flexDirection: "column", minHeight: "65vh", justifyContent: "space-between" }}>
+
+              {/* STEPPED MODES — settle, pmr, racing, winddown */}
+              {["settle", "pmr", "racing", "winddown"].includes(nightMode) && step && (
+                <div style={{ display: "flex", flexDirection: "column", minHeight: "70vh", justifyContent: "space-between" }}>
                   <div style={{ textAlign: "center", padding: "28px 16px 20px" }}>
                     <div style={{ fontSize: 50, marginBottom: 16 }}>{step.emoji}</div>
-                    <div style={{ fontSize: 20, fontFamily: "'Nunito', sans-serif", fontWeight: 800, color: "#2a3a5a", marginBottom: 14, lineHeight: 1.3 }}>{step.title}</div>
-                    <div style={{ fontSize: 14, color: "#5a6a80", fontFamily: "'Nunito Sans', sans-serif", lineHeight: 1.8, maxWidth: 300, margin: "0 auto" }}>{step.body}</div>
+                    <div style={{ fontSize: 20, fontFamily: "'Nunito', sans-serif", fontWeight: 800, color: "#e8e0f8", marginBottom: 14, lineHeight: 1.3 }}>{step.title}</div>
+                    <div style={{ fontSize: 14, color: "#9090b8", fontFamily: "'Nunito Sans', sans-serif", lineHeight: 1.8, maxWidth: 300, margin: "0 auto" }}>{step.body}</div>
+                    {step.hasInput && (
+                      <textarea
+                        placeholder="Type the thought here… or just in your head"
+                        rows={3}
+                        style={{ marginTop: 16, width: "100%", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, color: "#e8e0f8", fontSize: 14, padding: "12px 14px", fontFamily: "'Nunito Sans', sans-serif", outline: "none", resize: "none" }}
+                      />
+                    )}
                   </div>
                   <div style={{ paddingBottom: 20 }}>
                     <div style={{ display: "flex", justifyContent: "center", gap: 6, marginBottom: 20 }}>
-                      {STEPS.map((_, i) => <div key={i} style={{ width: i===nightStep?18:6, height: 6, borderRadius: 3, background: i===nightStep?"#5580cc":"#c8d8e8", transition: "all 0.3s" }} />)}
+                      {currentSteps.map((_, i) => <div key={i} style={{ width: i===nightStep?18:6, height: 6, borderRadius: 3, background: i===nightStep?"#8080cc":"#303060", transition: "all 0.3s" }} />)}
                     </div>
-                    <button onClick={() => { if(nightStep<STEPS.length-1) setNightStep(s=>s+1); else { setNightMode("menu"); setNightStep(0); } }}
-                      style={{ width: "100%", padding: "15px", borderRadius: 14, background: "linear-gradient(135deg, #5580cc, #4060aa)", border: "none", color: "white", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "'Nunito', sans-serif" }}>
-                      {nightStep < STEPS.length-1 ? step.action + " →" : "Close ♡"}
+                    <button onClick={() => { if(nightStep<currentSteps.length-1) setNightStep(s=>s+1); else { setNightMode("menu"); setNightStep(0); } }}
+                      style={{ width: "100%", padding: "15px", borderRadius: 14, background: "linear-gradient(135deg, #5560aa, #4050899)", border: "none", color: "white", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "'Nunito', sans-serif", background: "rgba(80,80,160,0.8)" }}>
+                      {nightStep < currentSteps.length-1 ? (step.action || "Next →") : "Done ♡"}
                     </button>
-                    <button onClick={() => { setNightMode("menu"); setNightStep(0); }}
-                      style={{ width: "100%", marginTop: 8, padding: "10px", borderRadius: 10, background: "transparent", border: "none", color: "#90a0b0", fontSize: 13, cursor: "pointer", fontFamily: "'Nunito Sans', sans-serif" }}>← Back</button>
+                    <button onClick={() => { setNightMode("menu"); setNightStep(0); window.scrollTo(0,0); }}
+                      style={{ width: "100%", marginTop: 8, padding: "10px", borderRadius: 10, background: "transparent", border: "none", color: "#6060a0", fontSize: 13, cursor: "pointer", fontFamily: "'Nunito Sans', sans-serif" }}>← Back to night menu</button>
                   </div>
                 </div>
               )}
+
+              {/* STORY MODE */}
+              {nightMode === "story" && (
+                <div style={{ display: "flex", flexDirection: "column", minHeight: "70vh", justifyContent: "space-between" }}>
+                  <div style={{ textAlign: "center", padding: "32px 16px 20px" }}>
+                    <div style={{ fontSize: 50, marginBottom: 16 }}>{STORY_SCENES[storyIdx].emoji}</div>
+                    <div style={{ fontSize: 18, fontFamily: "'Nunito', sans-serif", fontWeight: 800, color: "#e8e0f8", marginBottom: 20, lineHeight: 1.3 }}>{STORY_SCENES[storyIdx].title}</div>
+                    <div style={{ fontSize: 15, color: "#9090b8", fontFamily: "'Nunito Sans', sans-serif", lineHeight: 2, maxWidth: 320, margin: "0 auto" }}>{STORY_SCENES[storyIdx].body}</div>
+                  </div>
+                  <div style={{ paddingBottom: 20 }}>
+                    <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                      {STORY_SCENES.map((s, i) => (
+                        <button key={i} onClick={() => setStoryIdx(i)}
+                          style={{ flex: 1, padding: "8px 4px", borderRadius: 10, background: i===storyIdx ? "rgba(80,80,160,0.5)" : "rgba(255,255,255,0.04)", border: `1px solid ${i===storyIdx ? "#8080cc" : "rgba(255,255,255,0.08)"}`, color: "#9090b8", fontSize: 18, cursor: "pointer" }}>
+                          {s.emoji}
+                        </button>
+                      ))}
+                    </div>
+                    <button onClick={() => setStoryIdx(prev => (prev + 1) % STORY_SCENES.length)}
+                      style={{ width: "100%", padding: "14px", borderRadius: 14, background: "rgba(80,80,160,0.5)", border: "1px solid rgba(128,128,200,0.3)", color: "#c8c0e8", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Nunito', sans-serif", marginBottom: 8 }}>
+                      Take me somewhere else →
+                    </button>
+                    <button onClick={() => { setNightMode("menu"); setNightStep(0); window.scrollTo(0,0); }}
+                      style={{ width: "100%", padding: "10px", borderRadius: 10, background: "transparent", border: "none", color: "#6060a0", fontSize: 13, cursor: "pointer", fontFamily: "'Nunito Sans', sans-serif" }}>← Back to night menu</button>
+                  </div>
+                </div>
+              )}
+
+              {/* RAMBLE MODE */}
               {nightMode === "ramble" && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  <div style={{ fontSize: 13, color: "#8a80a0", fontFamily: "'Nunito Sans', sans-serif", fontStyle: "italic", lineHeight: 1.6, textAlign: "center", padding: "8px 0" }}>
+                  <div style={{ fontSize: 13, color: "#8080a8", fontFamily: "'Nunito Sans', sans-serif", fontStyle: "italic", lineHeight: 1.6, textAlign: "center", padding: "8px 0" }}>
                     Just write. No rules. No one will read this.
                   </div>
                   <textarea value={nightText} onChange={e => setNightText(e.target.value)} placeholder="It's okay to start mid-thought. Start anywhere…" autoFocus
-                    style={{ width: "100%", minHeight: 260, background: "#fafcf8", border: "1px solid #d4e0d0", borderRadius: 14, color: "#2a3a2a", fontSize: 15, lineHeight: 1.9, padding: "14px", fontFamily: "'Nunito Sans', sans-serif", outline: "none", resize: "none" }} />
+                    style={{ width: "100%", minHeight: 260, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 14, color: "#e8e0f8", fontSize: 15, lineHeight: 1.9, padding: "14px", fontFamily: "'Nunito Sans', sans-serif", outline: "none", resize: "none" }} />
                   <div style={{ display: "flex", gap: 10 }}>
                     <button onClick={() => { setNightText(""); setNightMode("menu"); }}
-                      style={{ flex: 1, padding: 12, borderRadius: 12, background: "transparent", border: "1px solid #d0e0cc", color: "#7a9080", fontSize: 13, cursor: "pointer", fontFamily: "'Nunito', sans-serif" }}>Clear &amp; done</button>
+                      style={{ flex: 1, padding: 12, borderRadius: 12, background: "transparent", border: "1px solid rgba(255,255,255,0.1)", color: "#6060a0", fontSize: 13, cursor: "pointer", fontFamily: "'Nunito', sans-serif" }}>Clear &amp; done</button>
                     <button onClick={() => {
                       if(nightText.trim()) {
                         const e = { id: Date.now(), text: "[Night note] "+nightText.trim(), date: new Date().toISOString() };
@@ -2556,10 +2663,13 @@ export default function MentalHealthTracker() {
                       }
                       setNightText(""); setNightMode("menu");
                     }}
-                      style={{ flex: 2, padding: 12, borderRadius: 12, background: "linear-gradient(135deg, #7060b0, #5a4a9a)", border: "none", color: "white", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Nunito', sans-serif" }}>Save to journal</button>
+                      style={{ flex: 2, padding: 12, borderRadius: 12, background: "rgba(80,80,160,0.6)", border: "1px solid rgba(128,128,200,0.3)", color: "white", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Nunito', sans-serif" }}>Save to journal</button>
                   </div>
+                  <button onClick={() => { setNightMode("menu"); setNightStep(0); window.scrollTo(0,0); }}
+                    style={{ padding: "10px", borderRadius: 10, background: "transparent", border: "none", color: "#6060a0", fontSize: 13, cursor: "pointer", fontFamily: "'Nunito Sans', sans-serif" }}>← Back to night menu</button>
                 </div>
               )}
+
             </div>
           );
         })()}
@@ -2833,7 +2943,8 @@ export default function MentalHealthTracker() {
               subtitle: "When I need immediate support",
               color: "#ef4444",
               fields: [
-                { key: "professionalContacts", label: "Professional & crisis contacts", placeholder: "e.g. GP: Dr Singh — 0161 xxx\nSamaritans: 116 123\nCrisis team: xxx\nA&E if needed", hint: "The real numbers to call. Include your GP, therapist, and crisis lines." },
+                { key: "crisisTeamNumber", label: "My crisis team number", placeholder: "e.g. 0161 123 4567", hint: "If you're under a crisis team, add their number here. It will appear on your crisis screen so you can call with one tap.", isPhone: true },
+                { key: "professionalContacts", label: "Other professional & crisis contacts", placeholder: "e.g. GP: Dr Singh — 0161 xxx\nSamaritans: 116 123\nA&E if needed", hint: "The real numbers to call. Include your GP, therapist, and crisis lines." },
                 { key: "safeEnvironment", label: "Making my environment safer", placeholder: "e.g. Ask someone to stay with me, remove or lock away things that could harm me, go to a friend's house…", hint: "Practical steps to reduce risk in a crisis moment." },
                 { key: "level3", label: "My reason to stay", placeholder: "e.g. My dog. Finishing my degree. The people who love me. The version of me I'm still becoming.", hint: "Your anchor. What matters most. This can be one word or a paragraph." },
               ],
@@ -2853,23 +2964,22 @@ export default function MentalHealthTracker() {
 
           const current = sections[planSection];
 
+          // If arrived from a crisis routing — skip intro, show plan directly
+          const fromCrisis = planSection === 2 && checkinSuggestions === null;
+
           return (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              {/* Intro */}
-              <div style={{ background: "#fafcf8", border: "1px solid #deeeda", borderRadius: 20, padding: "18px 20px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+
+              {/* Crisis banner — only when on level 3 */}
+              {planSection === 2 && (
+                <div style={{ background: "linear-gradient(135deg, #1a0a2e, #2a1a4a)", border: "1px solid #a78bfa40", borderRadius: 16, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12 }}>
                   <span style={{ fontSize: 22 }}>🛡️</span>
-                  <div style={{ fontSize: 16, fontFamily: "'Nunito', sans-serif", fontWeight: 800, color: "#2d6a2d" }}>My Personal Safety Plan</div>
-                </div>
-                <div style={{ fontSize: 12, color: "#5a8a5a", lineHeight: 1.6 }}>
-                  This is yours. It covers everything from the everyday hard days all the way through to crisis moments. Fill in as much or as little as feels right. Come back and update it whenever you need to.
-                </div>
-                {safetyPlan.lastUpdated && (
-                  <div style={{ fontSize: 10, color: "#7aaa7a", fontFamily: "'DM Mono', monospace", marginTop: 8 }}>
-                    Last updated: {new Date(safetyPlan.lastUpdated).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: "#e8e0f8", fontFamily: "'Nunito', sans-serif" }}>Your Level 3 Crisis Plan</div>
+                    <div style={{ fontSize: 12, color: "#c8b8e8", fontFamily: "'Nunito Sans', sans-serif", marginTop: 2 }}>Written by you, for this exact moment</div>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
 
               {/* Section tabs */}
               <div style={{ display: "flex", gap: 6, overflowX: "auto", scrollbarWidth: "none" }}>
@@ -2906,6 +3016,24 @@ export default function MentalHealthTracker() {
                         {field.label.toUpperCase()}
                       </div>
                       <div style={{ fontSize: 11, color: "#7aaa7a", marginBottom: 6, fontStyle: "italic" }}>{field.hint}</div>
+                      {field.isPhone ? (
+                        <div>
+                          <input
+                            type="tel"
+                            value={safetyPlan[field.key] || ""}
+                            onChange={e => updatePlan(field.key, e.target.value)}
+                            placeholder={field.placeholder}
+                            style={{ width: "100%", background: "#ffffff", border: "1.5px solid #d4e8cc", borderRadius: 12, color: "#1a3a1a", fontSize: 18, fontWeight: 700, padding: "12px 14px", fontFamily: "'Nunito', sans-serif", outline: "none", letterSpacing: 1 }}
+                          />
+                          {safetyPlan[field.key]?.trim() && (
+                            <a href={`tel:${safetyPlan[field.key].replace(/\s/g, "")}`}
+                              style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, background: "#e8f5e8", border: "1px solid #c8e4c0", borderRadius: 10, padding: "8px 12px", textDecoration: "none" }}>
+                              <span>📞</span>
+                              <span style={{ fontSize: 12, color: "#2a5a2a", fontFamily: "'Nunito', sans-serif", fontWeight: 700 }}>Tap to call {safetyPlan[field.key]}</span>
+                            </a>
+                          )}
+                        </div>
+                      ) : (
                       <textarea
                         value={safetyPlan[field.key]}
                         onChange={e => updatePlan(field.key, e.target.value)}
@@ -2920,6 +3048,7 @@ export default function MentalHealthTracker() {
                           resize: "vertical", transition: "border-color 0.2s",
                         }}
                       />
+                      )}
                     </div>
                   ))}
 
@@ -3021,6 +3150,69 @@ export default function MentalHealthTracker() {
               <div style={{ fontSize: 11, color: "#9aca9a", textAlign: "center", lineHeight: 1.5, paddingBottom: 4 }}>
                 Your plan is stored privately on this device — Anchor never sees it.<br />Consider sharing it with someone you trust.
               </div>
+
+              {/* Crisis plan download — only on level 3 */}
+              {planSection === 2 && safetyPlan.lastUpdated && (
+                <button
+                  onClick={() => {
+                    const date = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+                    const lines = [
+                      "MY CRISIS PLAN — LEVEL 3",
+                      "Created with Anchor by Wired & Well",
+                      `Last updated: ${date}`,
+                      "",
+                      "─────────────────────────────────────",
+                      "",
+                    ];
+                    if (safetyPlan.crisisTeamNumber?.trim()) {
+                      lines.push("MY CRISIS TEAM NUMBER");
+                      lines.push(safetyPlan.crisisTeamNumber.trim());
+                      lines.push("");
+                    }
+                    if (safetyPlan.professionalContacts?.trim()) {
+                      lines.push("PROFESSIONAL & CRISIS CONTACTS");
+                      lines.push(safetyPlan.professionalContacts.trim());
+                      lines.push("");
+                    }
+                    if (safetyPlan.safeEnvironment?.trim()) {
+                      lines.push("MAKING MY ENVIRONMENT SAFER");
+                      lines.push(safetyPlan.safeEnvironment.trim());
+                      lines.push("");
+                    }
+                    if (safetyPlan.level3?.trim()) {
+                      lines.push("MY REASON TO STAY");
+                      lines.push(safetyPlan.level3.trim());
+                      lines.push("");
+                    }
+                    lines.push("─────────────────────────────────────");
+                    lines.push("EMERGENCY NUMBERS");
+                    lines.push("999 — Emergency services");
+                    lines.push("111 option 2 — NHS urgent mental health");
+                    lines.push("116 123 — Samaritans (free, 24/7)");
+                    lines.push("Text SHOUT to 85258 — Shout crisis text line");
+                    lines.push("");
+                    lines.push("Anchor is a self-help tool — not a substitute for professional advice.");
+                    lines.push("wiredandwell.co.uk");
+                    const blob = new Blob([lines.join("\n")], { type: "text/plain" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = "my-crisis-plan.txt";
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                  style={{
+                    width: "100%", padding: "13px", borderRadius: 14,
+                    background: "linear-gradient(135deg, #1a0a2e, #2a1a4a)",
+                    border: "1.5px solid #a78bfa40",
+                    color: "#e8e0f8", fontSize: 13, fontWeight: 700,
+                    cursor: "pointer", fontFamily: "'Nunito', sans-serif",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  }}
+                >
+                  <span>📄</span> Download my crisis plan
+                </button>
+              )}
 
               {/* Download safety plan */}
               {safetyPlan.lastUpdated && (
@@ -3424,7 +3616,7 @@ export default function MentalHealthTracker() {
       )}
 
       {/* ESCALATION ALERT MODAL */}
-      {escalationAlert && (
+      {escalationAlert && !checkinSuggestions && (
         <div onClick={() => setEscalationAlert(null)}
           style={{ position: "fixed", inset: 0, zIndex: 250, background: "rgba(40,30,30,0.7)", backdropFilter: "blur(8px)", display: "flex", alignItems: "flex-end", justifyContent: "center", padding: "0 16px 32px" }}>
           <div onClick={e => e.stopPropagation()}
