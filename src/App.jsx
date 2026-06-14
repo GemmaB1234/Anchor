@@ -993,7 +993,7 @@ export default function MentalHealthTracker() {
           <div style={{ fontSize: 32, fontFamily: "'Nunito', sans-serif", fontWeight: 900, color: "#1a3820", lineHeight: 1.1, marginBottom: 8 }}>
             Hey{profile?.id === "all" ? "" : ` —`}
           </div>
-          <div style={{ fontSize: 20, fontFamily: "'Nunito', sans-serif", fontWeight: 400, fontStyle: "italic", color: "#4a8a4a", lineHeight: 1.3, marginBottom: 12 }}>
+          <div style={{ fontSize: 16, fontFamily: "'Nunito', sans-serif", fontWeight: 400, fontStyle: "italic", color: "#4a8a4a", lineHeight: 1.3, marginBottom: 12 }}>
             how are you today?
           </div>
           <div style={{ fontSize: 13, color: "#8aaa88", fontFamily: "'Nunito Sans', sans-serif", lineHeight: 1.7, maxWidth: 280, margin: "0 auto" }}>
@@ -1067,7 +1067,7 @@ export default function MentalHealthTracker() {
             <div style={{ textAlign: "center", marginBottom: 28 }}>
               <div style={{ fontSize: 9, fontFamily: "'DM Mono', monospace", color: "#9aba98", letterSpacing: 2.5, marginBottom: 10 }}>WIRED &amp; WELL</div>
               <div style={{ fontSize: 32, fontFamily: "'Nunito', sans-serif", fontWeight: 900, color: "#2a5a2a", marginBottom: 6 }}>What brings you here?</div>
-              <div style={{ fontSize: 14, color: "#6a8a6a", fontFamily: "'Nunito Sans', sans-serif", lineHeight: 1.7, maxWidth: 300 }}>
+              <div style={{ fontSize: 14, color: "#6a8a6a", fontFamily: "'Nunito Sans', sans-serif", lineHeight: 1.7, maxWidth: 220 }}>
                 We'll organise Anchor around what matters most to you. You can always change this later.
               </div>
             </div>
@@ -1182,14 +1182,22 @@ export default function MentalHealthTracker() {
   return (
     <div style={{
       minHeight: "100vh",
-      background: "linear-gradient(160deg, #f6f9f4 0%, #f0f6ee 40%, #f4f8f2 100%)",
+      background: "#e8ede6",
+      display: "flex",
+      alignItems: "flex-start",
+      justifyContent: "center",
       fontFamily: "'Nunito Sans', sans-serif",
+    }}>
+    <div style={{
+      width: "100%",
+      maxWidth: 480,
+      minHeight: "100vh",
+      background: "linear-gradient(160deg, #f6f9f4 0%, #f0f6ee 40%, #f4f8f2 100%)",
       color: "#1a3a1a",
       display: "flex",
       flexDirection: "column",
-      maxWidth: 1100,
-      margin: "0 auto",
-      width: "100%",
+      boxShadow: "0 0 60px rgba(0,0,0,0.12)",
+      position: "relative",
     }}>
 
       <style>{`
@@ -1227,7 +1235,7 @@ export default function MentalHealthTracker() {
           {/* Left — date + greeting */}
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 8, color: "#7aaa7a", fontFamily: "'DM Mono', monospace", letterSpacing: 2 }}>{today.toUpperCase()}</div>
-            <div style={{ fontSize: 20, fontFamily: "'Nunito', sans-serif", fontWeight: 800, color: "#2a4a2a", lineHeight: 1.2, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 300 }}>
+            <div style={{ fontSize: 16, fontFamily: "'Nunito', sans-serif", fontWeight: 800, color: "#2a4a2a", lineHeight: 1.2, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 220 }}>
               {profile?.greetings
                 ? profile.greetings[new Date().getDay() % profile.greetings.length]
                 : "How are you really?"}
@@ -1265,12 +1273,12 @@ export default function MentalHealthTracker() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(10, 1fr)", gap: "2px 0" }}>
             {TABS.map(t => (
               <button key={t.id} onClick={() => setTab(t.id)}
-                style={{ padding: "8px 4px 10px", border: "none", background: tab === t.id ? "rgba(52,168,83,0.08)" : "transparent", borderRadius: 10, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, position: "relative", transition: "background 0.15s" }}>
+                style={{ padding: "6px 2px 7px", border: "none", background: tab === t.id ? "rgba(52,168,83,0.08)" : "transparent", borderRadius: 10, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, position: "relative", transition: "background 0.15s" }}>
                 {tab === t.id && (
                   <div style={{ position: "absolute", top: 0, left: "20%", right: "20%", height: 2, borderRadius: 2, background: "linear-gradient(90deg, #34a853, #22c55e)" }} />
                 )}
-                <span style={{ fontSize: tab === t.id ? 26 : 22, transition: "font-size 0.15s" }}>{t.emoji}</span>
-                <span style={{ fontSize: 11, fontFamily: "'Nunito', sans-serif", fontWeight: tab === t.id ? 800 : 500, color: tab === t.id ? "#2a5a2a" : "#9aba90", whiteSpace: "nowrap" }}>{t.label}</span>
+                <span style={{ fontSize: tab === t.id ? 22 : 19, transition: "font-size 0.15s" }}>{t.emoji}</span>
+                <span style={{ fontSize: 9, fontFamily: "'Nunito', sans-serif", fontWeight: tab === t.id ? 800 : 500, color: tab === t.id ? "#2a5a2a" : "#9aba90", whiteSpace: "nowrap" }}>{t.label}</span>
               </button>
             ))}
           </div>
@@ -1278,7 +1286,7 @@ export default function MentalHealthTracker() {
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, padding: "20px 32px 100px", maxWidth: 1100, width: "100%", margin: "0 auto" }}>
+      <div style={{ flex: 1, padding: "16px 20px 100px" }}>
 
         {/* CHECK IN TAB */}
         {tab === "checkin" && (
@@ -2590,7 +2598,7 @@ export default function MentalHealthTracker() {
                 <div style={{ display: "flex", flexDirection: "column", minHeight: "70vh", justifyContent: "space-between" }}>
                   <div style={{ textAlign: "center", padding: "28px 16px 20px" }}>
                     <div style={{ fontSize: 50, marginBottom: 16 }}>{step.emoji}</div>
-                    <div style={{ fontSize: 20, fontFamily: "'Nunito', sans-serif", fontWeight: 800, color: "#e8e0f8", marginBottom: 14, lineHeight: 1.3 }}>{step.title}</div>
+                    <div style={{ fontSize: 16, fontFamily: "'Nunito', sans-serif", fontWeight: 800, color: "#e8e0f8", marginBottom: 14, lineHeight: 1.3 }}>{step.title}</div>
                     <div style={{ fontSize: 14, color: "#9090b8", fontFamily: "'Nunito Sans', sans-serif", lineHeight: 1.8, maxWidth: 300, margin: "0 auto" }}>{step.body}</div>
                     {step.hasInput && (
                       <textarea
@@ -2698,7 +2706,7 @@ export default function MentalHealthTracker() {
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <div style={{ textAlign: "center", padding: "12px 0 4px" }}>
                 <div style={{ fontSize: 40, marginBottom: 10 }}>💌</div>
-                <div style={{ fontSize: 20, fontFamily: "'Nunito', sans-serif", fontWeight: 800, color: "#2a4a2a", marginBottom: 8 }}>Reach Out</div>
+                <div style={{ fontSize: 16, fontFamily: "'Nunito', sans-serif", fontWeight: 800, color: "#2a4a2a", marginBottom: 8 }}>Reach Out</div>
                 <div style={{ fontSize: 13, color: "#6a8a6a", fontFamily: "'Nunito Sans', sans-serif", lineHeight: 1.8 }}>
                   Add the people you trust below and you'll be able to message them in one tap — even when you can't find the words yourself.
                 </div>
@@ -2778,7 +2786,7 @@ export default function MentalHealthTracker() {
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <div style={{ textAlign: "center", padding: "8px 0" }}>
                 <div style={{ fontSize: 32, marginBottom: 8 }}>💌</div>
-                <div style={{ fontSize: 20, fontFamily: "'Nunito', sans-serif", fontWeight: 800, color: "#2a4a2a", marginBottom: 4 }}>Reach Out</div>
+                <div style={{ fontSize: 16, fontFamily: "'Nunito', sans-serif", fontWeight: 800, color: "#2a4a2a", marginBottom: 4 }}>Reach Out</div>
                 <div style={{ fontSize: 13, color: "#6a8a6a", fontFamily: "'Nunito Sans', sans-serif", lineHeight: 1.6 }}>
                   You don't have to find the words.<br />We'll help you say what you mean.
                 </div>
@@ -3739,7 +3747,7 @@ export default function MentalHealthTracker() {
               {/* Header — warm and human */}
               <div style={{ textAlign: "center", marginBottom: 22 }}>
                 <div style={{ fontSize: 38, marginBottom: 12, lineHeight: 1 }}>🤍</div>
-                <div style={{ fontSize: 20, fontFamily: "'Nunito', sans-serif", fontWeight: 800, color: "#1e3820", marginBottom: 8, lineHeight: 1.3 }}>
+                <div style={{ fontSize: 16, fontFamily: "'Nunito', sans-serif", fontWeight: 800, color: "#1e3820", marginBottom: 8, lineHeight: 1.3 }}>
                   You reached out.<br />That took courage.
                 </div>
                 <div style={{ fontSize: 13, color: "#6a8a6a", fontFamily: "'Nunito Sans', sans-serif", lineHeight: 1.8 }}>
@@ -3878,6 +3886,7 @@ export default function MentalHealthTracker() {
           WIRED &amp; WELL · ANCHOR · wiredandwell.co.uk
         </div>
       </div>
+    </div>
     </div>
   );
 }
