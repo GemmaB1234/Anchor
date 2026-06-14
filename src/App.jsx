@@ -982,7 +982,44 @@ export default function MentalHealthTracker() {
   );
 
   // Opening mood screen — shown every session after onboarding
-  if (onboardingDone && openingMood === null) return (
+  if (onboardingDone && openingMood === null) {
+    // If logged in — show compact welcome back instead of full mood screen
+    if (currentUser) return (
+      <div style={{ minHeight: "100vh", background: "linear-gradient(160deg, #f6f9f4 0%, #eef6ec 100%)", fontFamily: "'Nunito Sans', sans-serif", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 24px" }}>
+        <style>{`@import url('https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400;1,700&family=Nunito+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap'); * { box-sizing: border-box; } @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } } .mood-card { animation: fadeIn 0.4s ease both; }`}</style>
+        <div style={{ textAlign: "center", marginBottom: 32, animation: "fadeIn 0.5s ease" }}>
+          <div style={{ fontSize: 44, marginBottom: 16 }}>⚓</div>
+          <div style={{ fontSize: 26, fontFamily: "'Nunito', sans-serif", fontWeight: 900, color: "#1a3820", marginBottom: 8 }}>
+            Welcome back, {currentUser.name.split(" ")[0]}.
+          </div>
+          <div style={{ fontSize: 15, fontFamily: "'Nunito', sans-serif", fontStyle: "italic", color: "#5a8a5a" }}>
+            How are you today?
+          </div>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%", maxWidth: 360 }}>
+          {OPENING_MOODS.map((m, i) => (
+            <div key={i} className="mood-card" onClick={() => handleOpeningMood(m)}
+              style={{ animationDelay: `${i * 0.08}s`, background: "#ffffff", border: `1.5px solid ${m.color}30`, borderRadius: 18, padding: "14px 18px", cursor: "pointer", display: "flex", alignItems: "center", gap: 14, boxShadow: `0 2px 12px ${m.color}10` }}>
+              <span style={{ fontSize: 28 }}>{m.emoji}</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 15, fontWeight: 800, color: "#1a3820", fontFamily: "'Nunito', sans-serif" }}>{m.label}</div>
+                <div style={{ fontSize: 11, color: "#8aaa88", fontFamily: "'Nunito Sans', sans-serif" }}>{m.sub}</div>
+              </div>
+              <span style={{ fontSize: 14, color: m.color }}>→</span>
+            </div>
+          ))}
+        </div>
+
+        <button onClick={() => { setOpeningMood({ route: "checkin", emoji: null }); setTab("checkin"); }}
+          style={{ marginTop: 20, background: "none", border: "none", fontSize: 12, color: "#b8d4b4", cursor: "pointer", fontFamily: "'Nunito Sans', sans-serif" }}>
+          Go straight in
+        </button>
+      </div>
+    );
+
+    // Not logged in — full mood screen
+    return (
     <div style={{ minHeight: "100vh", background: "linear-gradient(160deg, #f6f9f4 0%, #eef6ec 100%)", fontFamily: "'Nunito Sans', sans-serif", display: "flex", flexDirection: "column" }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400;1,700&family=Nunito+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap'); * { box-sizing: border-box; } @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } } .mood-card { animation: fadeIn 0.4s ease both; }`}</style>
       <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between", padding: "52px 24px 40px" }}>
@@ -1052,6 +1089,7 @@ export default function MentalHealthTracker() {
       </div>
     </div>
   );
+  } // end opening mood screen
 
   if (!onboardingDone) {    const slideIndex = Math.max(0, Math.min(welcomePage - 1, WELCOME_SLIDES.length - 1));
     const slide = WELCOME_SLIDES[slideIndex];
