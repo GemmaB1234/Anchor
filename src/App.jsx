@@ -1187,7 +1187,7 @@ export default function MentalHealthTracker() {
       color: "#1a3a1a",
       display: "flex",
       flexDirection: "column",
-      maxWidth: 780,
+      maxWidth: 1100,
       margin: "0 auto",
       width: "100%",
     }}>
@@ -1227,7 +1227,7 @@ export default function MentalHealthTracker() {
           {/* Left — date + greeting */}
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 8, color: "#7aaa7a", fontFamily: "'DM Mono', monospace", letterSpacing: 2 }}>{today.toUpperCase()}</div>
-            <div style={{ fontSize: 15, fontFamily: "'Nunito', sans-serif", fontWeight: 800, color: "#2a4a2a", lineHeight: 1.2, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 180 }}>
+            <div style={{ fontSize: 20, fontFamily: "'Nunito', sans-serif", fontWeight: 800, color: "#2a4a2a", lineHeight: 1.2, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 300 }}>
               {profile?.greetings
                 ? profile.greetings[new Date().getDay() % profile.greetings.length]
                 : "How are you really?"}
@@ -1265,12 +1265,12 @@ export default function MentalHealthTracker() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(10, 1fr)", gap: "2px 0" }}>
             {TABS.map(t => (
               <button key={t.id} onClick={() => setTab(t.id)}
-                style={{ padding: "5px 2px 6px", border: "none", background: tab === t.id ? "rgba(52,168,83,0.08)" : "transparent", borderRadius: 10, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, position: "relative", transition: "background 0.15s" }}>
+                style={{ padding: "8px 4px 10px", border: "none", background: tab === t.id ? "rgba(52,168,83,0.08)" : "transparent", borderRadius: 10, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, position: "relative", transition: "background 0.15s" }}>
                 {tab === t.id && (
                   <div style={{ position: "absolute", top: 0, left: "20%", right: "20%", height: 2, borderRadius: 2, background: "linear-gradient(90deg, #34a853, #22c55e)" }} />
                 )}
-                <span style={{ fontSize: tab === t.id ? 19 : 17, transition: "font-size 0.15s" }}>{t.emoji}</span>
-                <span style={{ fontSize: 8, fontFamily: "'Nunito', sans-serif", fontWeight: tab === t.id ? 800 : 500, color: tab === t.id ? "#2a5a2a" : "#9aba90", whiteSpace: "nowrap" }}>{t.label}</span>
+                <span style={{ fontSize: tab === t.id ? 26 : 22, transition: "font-size 0.15s" }}>{t.emoji}</span>
+                <span style={{ fontSize: 11, fontFamily: "'Nunito', sans-serif", fontWeight: tab === t.id ? 800 : 500, color: tab === t.id ? "#2a5a2a" : "#9aba90", whiteSpace: "nowrap" }}>{t.label}</span>
               </button>
             ))}
           </div>
@@ -1278,7 +1278,7 @@ export default function MentalHealthTracker() {
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, padding: "16px 20px 100px" }}>
+      <div style={{ flex: 1, padding: "20px 32px 100px", maxWidth: 1100, width: "100%", margin: "0 auto" }}>
 
         {/* CHECK IN TAB */}
         {tab === "checkin" && (
