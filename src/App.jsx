@@ -1180,19 +1180,17 @@ export default function MentalHealthTracker() {
   }
 
   return (
-    <div
-      style={{
-        height: "100vh",
-        background: "linear-gradient(160deg, #f6f9f4 0%, #f0f6ee 40%, #f4f8f2 100%)",
-        fontFamily: "'Nunito Sans', sans-serif",
-        color: "#1a3a1a",
-        display: "flex",
-        flexDirection: "column",
-        maxWidth: 480,
-        margin: "0 auto",
-        overflowY: "auto",
-      }}
-    >
+    <div style={{
+      minHeight: "100vh",
+      background: "linear-gradient(160deg, #f6f9f4 0%, #f0f6ee 40%, #f4f8f2 100%)",
+      fontFamily: "'Nunito Sans', sans-serif",
+      color: "#1a3a1a",
+      display: "flex",
+      flexDirection: "column",
+      maxWidth: 780,
+      margin: "0 auto",
+      width: "100%",
+    }}>
 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400;1,700&family=Nunito+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap');
@@ -1264,7 +1262,7 @@ export default function MentalHealthTracker() {
 
         {/* Tab grid */}
         <div style={{ borderBottom: "1px solid #e8f0e4", background: "#f6f9f4", padding: "4px 8px 3px" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "2px 0" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(10, 1fr)", gap: "2px 0" }}>
             {TABS.map(t => (
               <button key={t.id} onClick={() => setTab(t.id)}
                 style={{ padding: "5px 2px 6px", border: "none", background: tab === t.id ? "rgba(52,168,83,0.08)" : "transparent", borderRadius: 10, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, position: "relative", transition: "background 0.15s" }}>
