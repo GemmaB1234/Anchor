@@ -706,6 +706,11 @@ export default function MentalHealthTracker() {
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
     setJournal("");
+    // Scroll to suggestions after a short delay so they can see it
+    setTimeout(() => {
+      const el = document.getElementById("checkin-suggestions");
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 350);
 
     // ── Smart routing based on stress AND mood combined ──────────────────────
     // Stress: 1-3=nothing, 4-5=level1, 6-7=level2, 8-10=level3+crisis
@@ -860,7 +865,19 @@ export default function MentalHealthTracker() {
   const quote = QUOTES[quoteIdx];
   const today = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 
-  const handleAuth = (mode) => {
+  // ── SUPABASE CLIENT ──────────────────────────────────────────────────────
+  const getSupabase = () => {
+    const url = typeof SUPABASE_URL !== "undefined" ? SUPABASE_URL : (typeof process !== "undefined" && process.env?.VITE_SUPABASE_URL) || window.__SUPABASE_URL__;
+    const key = typeof SUPABASE_ANON_KEY !== "undefined" ? SUPABASE_ANON_KEY : (typeof process !== "undefined" && process.env?.VITE_SUPABASE_ANON_KEY) || window.__SUPABASE_ANON_KEY__;
+    if (!url || !key) return null;
+    // Use Supabase via CDN if available, otherwise fall back
+    if (typeof window !== "undefined" && window.supabase) {
+      return window.supabase.createClient(url, key);
+    }
+    return null;
+  };
+
+  const handleAuth = async (mode) => {
     if (!authEmail.trim() || !authPassword.trim()) {
       setAuthError("Please fill in all fields.");
       return;
@@ -875,17 +892,83 @@ export default function MentalHealthTracker() {
     }
     setAuthLoading(true);
     setAuthError("");
-    // Simulate Supabase auth — replace with real Supabase calls when ready
-    setTimeout(() => {
-      const user = { name: authName || authEmail.split("@")[0], email: authEmail };
-      setCurrentUser(user);
-      localStorage.setItem("mh_user", JSON.stringify(user));
-      setAuthScreen(null);
+
+    try {
+      const sb = getSupabase();
+
+      if (!sb) {
+        // Fallback to localStorage simulation if Supabase not configured
+        setTimeout(() => {
+          const user = { name: authName || authEmail.split("@")[0], email: authEmail };
+          setCurrentUser(user);
+          localStorage.setItem("mh_user", JSON.stringify(user));
+          setAuthScreen(null);
+          setAuthLoading(false);
+        }, 900);
+        return;
+      }
+
+      if (mode === "signup") {
+        const { data, error } = await sb.auth.signUp({
+          email: authEmail.trim(),
+          password: authPassword,
+          options: {
+            data: { name: authName.trim() }
+          }
+        });
+        if (error) throw error;
+        if (data?.user) {
+          // Check if email confirmation required
+          if (!data.session) {
+            setAuthError("");
+            setAuthLoading(false);
+            setAuthScreen("verify");
+            return;
+          }
+          const user = { name: authName.trim(), email: authEmail.trim(), id: data.user.id };
+          setCurrentUser(user);
+          localStorage.setItem("mh_user", JSON.stringify(user));
+          setAuthScreen(null);
+        }
+      } else {
+        const { data, error } = await sb.auth.signInWithPassword({
+          email: authEmail.trim(),
+          password: authPassword,
+        });
+        if (error) throw error;
+        if (data?.user) {
+          // Get name from metadata, or capitalise the part before @ in email
+          const rawName = data.user.user_metadata?.name || data.user.user_metadata?.full_name || "";
+          const emailName = data.user.email.split("@")[0].replace(/[._-]/g, " ").replace(/\w/g, c => c.toUpperCase());
+          const name = rawName.trim() || emailName;
+          const user = { name, email: data.user.email, id: data.user.id };
+          setCurrentUser(user);
+          localStorage.setItem("mh_user", JSON.stringify(user));
+          setAuthScreen("welcome");
+          setTimeout(() => setAuthScreen(null), 2200);
+        }
+      }
+    } catch (err) {
+      const msg = err.message || "Something went wrong. Please try again.";
+      if (msg.includes("User already registered")) {
+        setAuthError("An account with this email already exists. Try signing in instead.");
+      } else if (msg.includes("Invalid login credentials")) {
+        setAuthError("Incorrect email or password. Please try again.");
+      } else if (msg.includes("Email not confirmed")) {
+        setAuthError("Please check your email and confirm your account first.");
+      } else {
+        setAuthError(msg);
+      }
+    } finally {
       setAuthLoading(false);
-    }, 900);
+    }
   };
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
+    try {
+      const sb = getSupabase();
+      if (sb) await sb.auth.signOut();
+    } catch {}
     setCurrentUser(null);
     localStorage.removeItem("mh_user");
     setShowAccount(false);
@@ -975,6 +1058,9 @@ export default function MentalHealthTracker() {
     },
   ];
 
+  // If already signed in AND onboarding done — skip straight to app
+  // openingMood will be null so they see welcome back screen
+
   if (onboardingDone === null) return (
     <div style={{ minHeight: "100vh", background: "#f6f9f4", display: "flex", alignItems: "center", justifyContent: "center" }}>
       <div style={{ fontSize: 40 }}>🌿</div>
@@ -1018,7 +1104,7 @@ export default function MentalHealthTracker() {
       </div>
     );
 
-    // Not logged in — full mood screen
+    // Not logged in — full mood screen with sign up nudge at bottom
     return (
     <div style={{ minHeight: "100vh", background: "linear-gradient(160deg, #f6f9f4 0%, #eef6ec 100%)", fontFamily: "'Nunito Sans', sans-serif", display: "flex", flexDirection: "column" }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400;1,700&family=Nunito+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap'); * { box-sizing: border-box; } @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } } .mood-card { animation: fadeIn 0.4s ease both; }`}</style>
@@ -1086,10 +1172,41 @@ export default function MentalHealthTracker() {
             Skip and go straight in
           </button>
         </div>
+        {/* Sign up nudge for non logged-in users */}
+        {!currentUser && (
+          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(to top, #f6f9f4 60%, transparent)", padding: "32px 24px 24px", textAlign: "center" }}>
+            <div style={{ background: "white", border: "1px solid #d4e8cc", borderRadius: 16, padding: "16px 20px" }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#2a5a2a", fontFamily: "'Nunito', sans-serif", marginBottom: 4 }}>
+                Save your check-ins and plan across devices
+              </div>
+              <div style={{ fontSize: 12, color: "#7a9a7a", fontFamily: "'Nunito Sans', sans-serif", marginBottom: 12, lineHeight: 1.5 }}>
+                Create a free account — your data stays private and never leaves your control.
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => setAuthScreen("signup")}
+                  style={{ flex: 2, padding: "10px", borderRadius: 10, background: "linear-gradient(135deg, #34a853, #2a8a44)", border: "none", color: "white", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Nunito', sans-serif" }}>
+                  Create free account
+                </button>
+                <button onClick={() => setAuthScreen("signin")}
+                  style={{ flex: 1, padding: "10px", borderRadius: 10, background: "#f0f7ee", border: "1px solid #c8e4c0", color: "#2a5a2a", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Nunito', sans-serif" }}>
+                  Sign in
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
   } // end opening mood screen
+
+  // Skip onboarding entirely if user is already signed in
+  if (!onboardingDone && currentUser) {
+    // They're signed in — set onboarding done and show welcome back
+    setOnboardingDone(true);
+    localStorage.setItem("mh_onboarding_done", "true");
+    return null;
+  }
 
   if (!onboardingDone) {    const slideIndex = Math.max(0, Math.min(welcomePage - 1, WELCOME_SLIDES.length - 1));
     const slide = WELCOME_SLIDES[slideIndex];
@@ -1265,7 +1382,7 @@ export default function MentalHealthTracker() {
           {/* Left — date + greeting */}
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 8, color: "#7aaa7a", fontFamily: "'DM Mono', monospace", letterSpacing: 2 }}>{today.toUpperCase()}</div>
-            <div style={{ fontSize: 20, fontFamily: "'Nunito', sans-serif", fontWeight: 800, color: "#2a4a2a", lineHeight: 1.2, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 400 }}>
+            <div style={{ fontSize: 16, fontFamily: "'Nunito', sans-serif", fontWeight: 800, color: "#2a4a2a", lineHeight: 1.3, marginTop: 1, maxWidth: 220 }}>
               {profile?.greetings
                 ? profile.greetings[new Date().getDay() % profile.greetings.length]
                 : "How are you really?"}
@@ -1488,7 +1605,7 @@ export default function MentalHealthTracker() {
 
             {/* ── Smart post check-in routing ── */}
             {checkinSuggestions && (
-              <div style={{ animation: "fadeIn 0.4s ease" }}>
+              <div id="checkin-suggestions" style={{ animation: "fadeIn 0.4s ease" }}>
 
                 {/* CELEBRATE — mood 4 or 5, stress 1-3 */}
                 {checkinSuggestions.type === "celebrate" && (
@@ -1984,20 +2101,15 @@ export default function MentalHealthTracker() {
               </div>
             </div>
 
-            {/* Notification permission */}
-            {typeof Notification !== "undefined" && Notification.permission === "default" && customActivities.some(a => a.reminder) && (
-              <div style={{ background: "linear-gradient(135deg, #f4fcf4, #edf7ed)", border: "1px solid #c4ddc0", borderRadius: 16, padding: "14px 18px", display: "flex", alignItems: "center", gap: 12 }}>
-                <span style={{ fontSize: 22 }}>🔔</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "#2a4a2a", fontFamily: "'Nunito', sans-serif" }}>Gentle reminders</div>
-                  <div style={{ fontSize: 11, color: "#6a9060", fontFamily: "'Nunito Sans', sans-serif", marginTop: 2 }}>Allow notifications so Anchor can nudge you softly.</div>
-                </div>
-                <button onClick={requestNotificationPermission}
-                  style={{ padding: "8px 16px", borderRadius: 20, background: "#34a853", border: "none", color: "white", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Nunito', sans-serif", whiteSpace: "nowrap" }}>
-                  Allow
-                </button>
+            {/* Reminders coming soon */}
+            <div style={{ background: "linear-gradient(135deg, #f0f4ff, #e8eeff)", border: "1px solid #c0ccee", borderRadius: 16, padding: "14px 18px", display: "flex", alignItems: "center", gap: 12 }}>
+              <span style={{ fontSize: 22 }}>🔔</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#3a4a8a", fontFamily: "'Nunito', sans-serif" }}>Reminders — coming in the full app</div>
+                <div style={{ fontSize: 11, color: "#6a7ab0", fontFamily: "'Nunito Sans', sans-serif", marginTop: 2, lineHeight: 1.5 }}>Push notifications will work properly once Anchor is on the App Store. For now, activities track when you last did them.</div>
               </div>
-            )}
+              <div style={{ fontSize: 9, background: "#3a4a8a", color: "white", padding: "3px 8px", borderRadius: 6, fontFamily: "'DM Mono', monospace", flexShrink: 0 }}>SOON</div>
+            </div>
 
             {/* Activity cards — soft, roomy, tap-friendly */}
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -3268,33 +3380,47 @@ export default function MentalHealthTracker() {
                     };
                     const date = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
                     const lines = [
-                      "MY PERSONAL SAFETY PLAN",
-                      "Created with Anchor by Wired & Well",
-                      `Last updated: ${date}`,
+                      "╔══════════════════════════════════════════╗",
+                      "║         MY PERSONAL SAFETY PLAN          ║",
+                      "║           ⚓  Anchor by Wired & Well      ║",
+                      "╚══════════════════════════════════════════╝",
                       "",
-                      "─────────────────────────────────────",
+                      `  Last updated: ${date}`,
+                      `  anchor.wiredandwell.co.uk`,
+                      "",
+                      "──────────────────────────────────────────────",
                       "",
                     ];
                     Object.entries(SECTION_LABELS).forEach(([key, label]) => {
                       if (safetyPlan[key]?.trim()) {
-                        lines.push(`${label.toUpperCase()}`);
-                        lines.push(safetyPlan[key].trim());
+                        lines.push(`  ◆ ${label.toUpperCase()}`);
+                        lines.push(`  ${safetyPlan[key].trim().split('\n').join('\n  ')}`);
                         lines.push("");
                       }
                     });
-                    lines.push("─────────────────────────────────────");
-                    lines.push("Anchor is a self-help tool and is not a substitute for professional advice.");
-                    lines.push("In an emergency call 999. For urgent mental health support call 111 option 2.");
-                    lines.push("Samaritans: 116 123  |  Shout: text SHOUT to 85258");
-                    lines.push("wiredandwell.co.uk");
+                    lines.push("──────────────────────────────────────────────");
+                    lines.push("  ⚡ IN AN EMERGENCY");
+                    lines.push("  999 — Emergency services");
+                    lines.push("  111 option 2 — NHS urgent mental health");
+                    lines.push("  116 123 — Samaritans (free, 24/7)");
+                    lines.push("  Text SHOUT to 85258 — crisis text line");
+                    lines.push("");
+                    lines.push("──────────────────────────────────────────────");
+                    lines.push("  Anchor is a self-help tool — not a substitute");
+                    lines.push("  for professional medical advice or treatment.");
+                    lines.push("  wiredandwell.co.uk · hello@wiredandwell.co.uk");
+                    lines.push("──────────────────────────────────────────────");
 
-                    const blob = new Blob([lines.join("\n")], { type: "text/plain" });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement("a");
-                    a.href = url;
-                    a.download = "my-anchor-safety-plan.txt";
-                    a.click();
-                    URL.revokeObjectURL(url);
+                    const text = lines.join("\n");
+                    // iOS Safari compatible — open in new tab
+                    const win = window.open("", "_blank");
+                    if (win) {
+                      win.document.write("<pre style='font-family:monospace;font-size:14px;padding:24px;line-height:1.6;white-space:pre-wrap;'>" + text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;") + "</pre>");
+                      win.document.title = "My Anchor Safety Plan";
+                      win.document.close();
+                    } else {
+                      navigator.clipboard?.writeText(text).then(() => alert("Safety plan copied to clipboard — paste into Notes or email to save."));
+                    }
                   }}
                   style={{
                     width: "100%", padding: "13px", borderRadius: 14,
@@ -3304,7 +3430,7 @@ export default function MentalHealthTracker() {
                     display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                   }}
                 >
-                  <span>📄</span> Download my safety plan
+                  <span>📄</span> View &amp; save my safety plan
                 </button>
               )}
             </div>
@@ -3445,7 +3571,7 @@ export default function MentalHealthTracker() {
       </div>
 
       {/* ── AUTH MODAL (Sign Up / Sign In) ── */}
-      {authScreen && (
+      {authScreen && authScreen !== "verify" && (
         <div style={{ position: "fixed", inset: 0, zIndex: 500, background: "linear-gradient(160deg, #f6f9f4 0%, #eef6ec 100%)", fontFamily: "'Nunito Sans', sans-serif", display: "flex", flexDirection: "column", overflowY: "auto" }}>
           <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "52px 28px 40px", maxWidth: 440, margin: "0 auto", width: "100%" }}>
 
@@ -3629,6 +3755,42 @@ export default function MentalHealthTracker() {
             <div style={{ fontSize: 11, color: "#9aba98", textAlign: "center", fontFamily: "'Nunito Sans', sans-serif", lineHeight: 1.7 }}>
               Anchor is a self-help tool and is not a substitute for professional medical advice, diagnosis or treatment.
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── WELCOME BACK FLASH ── */}
+      {authScreen === "welcome" && currentUser && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 600, background: "linear-gradient(160deg, #f6f9f4, #eef6ec)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", animation: "fadeIn 0.3s ease" }}>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 52, marginBottom: 16 }}>⚓</div>
+            <div style={{ fontSize: 26, fontFamily: "'Nunito', sans-serif", fontWeight: 900, color: "#1a3820", marginBottom: 8 }}>
+              Welcome back, {currentUser.name.split(" ")[0]}.
+            </div>
+            <div style={{ fontSize: 15, color: "#7a9a7a", fontFamily: "'Nunito', sans-serif", fontStyle: "italic" }}>
+              Good to have you here.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── EMAIL VERIFY SCREEN ── */}
+      {authScreen === "verify" && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 500, background: "linear-gradient(160deg, #f6f9f4 0%, #eef6ec 100%)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 28px" }}>
+          <div style={{ textAlign: "center", maxWidth: 360 }}>
+            <div style={{ fontSize: 52, marginBottom: 20 }}>📬</div>
+            <div style={{ fontSize: 22, fontFamily: "'Nunito', sans-serif", fontWeight: 800, color: "#1a3820", marginBottom: 12 }}>Check your email</div>
+            <div style={{ fontSize: 15, color: "#5a8a5a", fontFamily: "'Nunito Sans', sans-serif", lineHeight: 1.7, marginBottom: 28 }}>
+              We've sent a confirmation link to <strong>{authEmail}</strong>. Click it to activate your account, then come back and sign in.
+            </div>
+            <button onClick={() => { setAuthScreen("signin"); setAuthError(""); }}
+              style={{ width: "100%", padding: "14px", borderRadius: 14, background: "linear-gradient(135deg, #34a853, #2a8a44)", border: "none", color: "white", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "'Nunito', sans-serif", marginBottom: 12 }}>
+              I've confirmed — Sign in
+            </button>
+            <button onClick={() => { setAuthScreen(null); setAuthError(""); }}
+              style={{ background: "none", border: "none", fontSize: 13, color: "#9aba98", cursor: "pointer", fontFamily: "'Nunito Sans', sans-serif" }}>
+              I'll do this later
+            </button>
           </div>
         </div>
       )}
