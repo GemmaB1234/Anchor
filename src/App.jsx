@@ -867,13 +867,12 @@ export default function MentalHealthTracker() {
 
   // ── SUPABASE CLIENT ──────────────────────────────────────────────────────
   const getSupabase = () => {
-    const url = typeof SUPABASE_URL !== "undefined" ? SUPABASE_URL : (typeof process !== "undefined" && process.env?.VITE_SUPABASE_URL) || window.__SUPABASE_URL__;
-    const key = typeof SUPABASE_ANON_KEY !== "undefined" ? SUPABASE_ANON_KEY : (typeof process !== "undefined" && process.env?.VITE_SUPABASE_ANON_KEY) || window.__SUPABASE_ANON_KEY__;
-    if (!url || !key) return null;
-    // Use Supabase via CDN if available, otherwise fall back
-    if (typeof window !== "undefined" && window.supabase) {
-      return window.supabase.createClient(url, key);
-    }
+    try {
+      const url = import.meta?.env?.VITE_SUPABASE_URL || "";
+      const key = import.meta?.env?.VITE_SUPABASE_ANON_KEY || "";
+      if (!url || !key) return null;
+      if (window.supabase) return window.supabase.createClient(url, key);
+    } catch {}
     return null;
   };
 
@@ -897,25 +896,30 @@ export default function MentalHealthTracker() {
       const sb = getSupabase();
 
       if (!sb) {
-        // Fallback to localStorage simulation if Supabase not configured
-        setTimeout(() => {
-          const user = { name: authName || authEmail.split("@")[0], email: authEmail };
-          setCurrentUser(user);
-          localStorage.setItem("mh_user", JSON.stringify(user));
-          setAuthScreen(null);
-          setAuthLoading(false);
-        }, 900);
+        // No Supabase configured — use localStorage simulation
+        const user = { name: authName || authEmail.split("@")[0], email: authEmail };
+        setCurrentUser(user);
+        localStorage.setItem("mh_user", JSON.stringify(user));
+        setAuthScreen("welcome");
+        setTimeout(() => setAuthScreen(null), 2200);
+        setAuthLoading(false);
         return;
       }
 
+      // Add a 10 second timeout
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Connection timed out. Please check your internet and try again.")), 10000)
+      );
+
       if (mode === "signup") {
-        const { data, error } = await sb.auth.signUp({
-          email: authEmail.trim(),
-          password: authPassword,
-          options: {
-            data: { name: authName.trim() }
-          }
-        });
+        const { data, error } = await Promise.race([
+          sb.auth.signUp({
+            email: authEmail.trim(),
+            password: authPassword,
+            options: { data: { name: authName.trim() } }
+          }),
+          timeoutPromise
+        ]);
         if (error) throw error;
         if (data?.user) {
           // Check if email confirmation required
@@ -931,10 +935,13 @@ export default function MentalHealthTracker() {
           setAuthScreen(null);
         }
       } else {
-        const { data, error } = await sb.auth.signInWithPassword({
-          email: authEmail.trim(),
-          password: authPassword,
-        });
+        const { data, error } = await Promise.race([
+          sb.auth.signInWithPassword({
+            email: authEmail.trim(),
+            password: authPassword,
+          }),
+          timeoutPromise
+        ]);
         if (error) throw error;
         if (data?.user) {
           // Get name from metadata, or capitalise the part before @ in email
