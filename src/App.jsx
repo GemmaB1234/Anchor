@@ -1119,7 +1119,7 @@ export default function MentalHealthTracker() {
     return (
     <div style={{ minHeight: "100vh", background: "linear-gradient(160deg, #f6f9f4 0%, #eef6ec 100%)", fontFamily: "'Nunito Sans', sans-serif", display: "flex", flexDirection: "column" }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400;1,700&family=Nunito+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap'); * { box-sizing: border-box; } @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } } .mood-card { animation: fadeIn 0.4s ease both; }`}</style>
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between", padding: "52px 24px 40px" }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "48px 24px 32px", gap: 28 }}>
 
         {/* Top */}
         <div style={{ textAlign: "center" }}>
@@ -1174,7 +1174,29 @@ export default function MentalHealthTracker() {
           ))}
         </div>
 
-        {/* Footer */}
+        {/* Sign up nudge */}
+        {!currentUser && (
+          <div style={{ background: "white", border: "1px solid #d4e8cc", borderRadius: 16, padding: "16px 20px" }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#2a5a2a", fontFamily: "'Nunito', sans-serif", marginBottom: 4 }}>
+              Save your check-ins and plan across devices
+            </div>
+            <div style={{ fontSize: 12, color: "#7a9a7a", fontFamily: "'Nunito Sans', sans-serif", marginBottom: 12, lineHeight: 1.5 }}>
+              Create a free account — your data stays private and never leaves your control.
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => setAuthScreen("signup")}
+                style={{ flex: 2, padding: "11px", borderRadius: 10, background: "linear-gradient(135deg, #34a853, #2a8a44)", border: "none", color: "white", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Nunito', sans-serif" }}>
+                Create free account
+              </button>
+              <button onClick={() => setAuthScreen("signin")}
+                style={{ flex: 1, padding: "11px", borderRadius: 10, background: "#f0f7ee", border: "1px solid #c8e4c0", color: "#2a5a2a", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Nunito', sans-serif" }}>
+                Sign in
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Skip */}
         <div style={{ textAlign: "center" }}>
           <button
             onClick={() => { setOpeningMood({ route: "checkin", emoji: null }); setTab("checkin"); }}
@@ -1183,29 +1205,7 @@ export default function MentalHealthTracker() {
             Skip and go straight in
           </button>
         </div>
-        {/* Sign up nudge for non logged-in users */}
-        {!currentUser && (
-          <div style={{ padding: "0 24px 32px", marginTop: 8 }}>
-            <div style={{ background: "white", border: "1px solid #d4e8cc", borderRadius: 16, padding: "16px 20px" }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#2a5a2a", fontFamily: "'Nunito', sans-serif", marginBottom: 4 }}>
-                Save your check-ins and plan across devices
-              </div>
-              <div style={{ fontSize: 12, color: "#7a9a7a", fontFamily: "'Nunito Sans', sans-serif", marginBottom: 12, lineHeight: 1.5 }}>
-                Create a free account — your data stays private and never leaves your control.
-              </div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={() => setAuthScreen("signup")}
-                  style={{ flex: 2, padding: "10px", borderRadius: 10, background: "linear-gradient(135deg, #34a853, #2a8a44)", border: "none", color: "white", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Nunito', sans-serif" }}>
-                  Create free account
-                </button>
-                <button onClick={() => setAuthScreen("signin")}
-                  style={{ flex: 1, padding: "10px", borderRadius: 10, background: "#f0f7ee", border: "1px solid #c8e4c0", color: "#2a5a2a", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Nunito', sans-serif" }}>
-                  Sign in
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+
       </div>
     </div>
   );
