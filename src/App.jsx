@@ -1185,7 +1185,7 @@ export default function MentalHealthTracker() {
         </div>
         {/* Sign up nudge for non logged-in users */}
         {!currentUser && (
-          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(to top, #f6f9f4 60%, transparent)", padding: "32px 24px 24px", textAlign: "center" }}>
+          <div style={{ padding: "0 24px 32px", marginTop: 8 }}>
             <div style={{ background: "white", border: "1px solid #d4e8cc", borderRadius: 16, padding: "16px 20px" }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: "#2a5a2a", fontFamily: "'Nunito', sans-serif", marginBottom: 4 }}>
                 Save your check-ins and plan across devices
