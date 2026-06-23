@@ -472,6 +472,7 @@ function ToolSection({ section }) {
 export default function MentalHealthTracker() {
   // Auth state
   const [authScreen, setAuthScreen] = useState(null); // null | "signup" | "signin"
+  const [, forceUpdate] = useState(0);
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
   const [authName, setAuthName] = useState("");
@@ -901,6 +902,7 @@ export default function MentalHealthTracker() {
         setCurrentUser(user);
         localStorage.setItem("mh_user", JSON.stringify(user));
         setAuthScreen("welcome");
+        forceUpdate(n => n + 1);
         setTimeout(() => setAuthScreen(null), 2200);
         setAuthLoading(false);
         return;
@@ -933,6 +935,7 @@ export default function MentalHealthTracker() {
           setCurrentUser(user);
           localStorage.setItem("mh_user", JSON.stringify(user));
           setAuthScreen(null);
+          forceUpdate(n => n + 1);
         }
       } else {
         const { data, error } = await Promise.race([
@@ -952,6 +955,7 @@ export default function MentalHealthTracker() {
           setCurrentUser(user);
           localStorage.setItem("mh_user", JSON.stringify(user));
           setAuthScreen("welcome");
+          forceUpdate(n => n + 1);
           setTimeout(() => setAuthScreen(null), 2200);
         }
       }
