@@ -1079,9 +1079,69 @@ export default function MentalHealthTracker() {
   );
 
   // Opening mood screen — shown every session after onboarding
+  // ── AUTH MODAL — rendered at top level so it works from ANY screen ──────
+  const authModalJSX = authScreen && authScreen !== "verify" && authScreen !== "welcome" ? (
+    <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "linear-gradient(160deg, #f6f9f4 0%, #eef6ec 100%)", fontFamily: "'Nunito Sans', sans-serif", display: "flex", flexDirection: "column", overflowY: "auto" }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "52px 28px 40px", maxWidth: 440, margin: "0 auto", width: "100%" }}>
+        <button onClick={() => { setAuthScreen(null); setAuthError(""); }}
+          style={{ position: "absolute", top: 20, right: 20, background: "#f0f7ee", border: "1px solid #c8e0c4", borderRadius: 10, width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, color: "#4a7a4a", cursor: "pointer" }}>✕</button>
+        <div style={{ textAlign: "center", marginBottom: 32 }}>
+          <div style={{ fontSize: 9, fontFamily: "'DM Mono', monospace", color: "#9aba98", letterSpacing: 2.5, marginBottom: 10 }}>WIRED &amp; WELL</div>
+          <div style={{ fontSize: 32, fontFamily: "'Nunito', sans-serif", fontWeight: 900, color: "#1a3820", marginBottom: 6 }}>Anchor</div>
+          <div style={{ fontSize: 15, fontFamily: "'Nunito', sans-serif", fontWeight: 700, color: "#4a7a4a", marginBottom: 4 }}>
+            {authScreen === "signup" ? "Create your account" : "Welcome back"}
+          </div>
+          <div style={{ fontSize: 13, color: "#8aaa88", fontFamily: "'Nunito Sans', sans-serif", lineHeight: 1.6 }}>
+            {authScreen === "signup" ? "Your data is stored privately. Only you can see it." : "Your journal, check-ins and plan are waiting for you."}
+          </div>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {authScreen === "signup" && (
+            <div>
+              <div style={{ fontSize: 10, fontFamily: "'DM Mono', monospace", color: "#7a9a7a", letterSpacing: 2, marginBottom: 6 }}>YOUR NAME</div>
+              <input value={authName} onChange={e => setAuthName(e.target.value)} placeholder="What should we call you?" autoCapitalize="words"
+                style={{ width: "100%", background: "#ffffff", border: "1.5px solid #d4e8cc", borderRadius: 14, color: "#1a3820", fontSize: 15, padding: "13px 16px", fontFamily: "'Nunito', sans-serif", fontWeight: 600, outline: "none" }} />
+            </div>
+          )}
+          <div>
+            <div style={{ fontSize: 10, fontFamily: "'DM Mono', monospace", color: "#7a9a7a", letterSpacing: 2, marginBottom: 6 }}>EMAIL</div>
+            <input value={authEmail} onChange={e => setAuthEmail(e.target.value)} placeholder="you@example.com" type="email" autoCapitalize="none" autoCorrect="off"
+              style={{ width: "100%", background: "#ffffff", border: "1.5px solid #d4e8cc", borderRadius: 14, color: "#1a3820", fontSize: 15, padding: "13px 16px", fontFamily: "'Nunito', sans-serif", fontWeight: 600, outline: "none" }} />
+          </div>
+          <div>
+            <div style={{ fontSize: 10, fontFamily: "'DM Mono', monospace", color: "#7a9a7a", letterSpacing: 2, marginBottom: 6 }}>PASSWORD</div>
+            <input value={authPassword} onChange={e => setAuthPassword(e.target.value)} placeholder={authScreen === "signup" ? "At least 8 characters" : "Your password"} type="password"
+              style={{ width: "100%", background: "#ffffff", border: "1.5px solid #d4e8cc", borderRadius: 14, color: "#1a3820", fontSize: 15, padding: "13px 16px", fontFamily: "'Nunito', sans-serif", fontWeight: 600, outline: "none" }} />
+          </div>
+          {authError && (
+            <div style={{ background: "#fff5f5", border: "1px solid #f0c8c8", borderRadius: 12, padding: "10px 14px", fontSize: 13, color: "#b05050", fontFamily: "'Nunito Sans', sans-serif" }}>{authError}</div>
+          )}
+          <button onClick={() => handleAuth(authScreen)} disabled={authLoading}
+            style={{ padding: "15px", borderRadius: 16, background: authLoading ? "#c8e4c0" : "linear-gradient(135deg, #34a853, #2a8a44)", border: "none", color: "white", fontSize: 15, fontWeight: 800, cursor: authLoading ? "default" : "pointer", fontFamily: "'Nunito', sans-serif", marginTop: 4, boxShadow: "0 4px 16px rgba(52,168,83,0.3)" }}>
+            {authLoading ? "Just a moment…" : authScreen === "signup" ? "Create my account" : "Sign in"}
+          </button>
+          <div style={{ textAlign: "center" }}>
+            <button onClick={() => { setAuthScreen(authScreen === "signup" ? "signin" : "signup"); setAuthError(""); }}
+              style={{ background: "none", border: "none", fontSize: 13, color: "#5a8a5a", cursor: "pointer", fontFamily: "'Nunito Sans', sans-serif", textDecoration: "underline" }}>
+              {authScreen === "signup" ? "Already have an account? Sign in" : "New to Anchor? Create account"}
+            </button>
+          </div>
+        </div>
+        <div style={{ marginTop: 28, background: "#f4f9f2", border: "1px solid #d4e8cc", borderRadius: 16, padding: "14px 16px" }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "#2a5a2a", fontFamily: "'Nunito', sans-serif", marginBottom: 4 }}>🔒 Your privacy</div>
+          <div style={{ fontSize: 11, color: "#6a8a6a", fontFamily: "'Nunito Sans', sans-serif", lineHeight: 1.7 }}>
+            Your journal, check-ins, and safety plan are stored privately. Wired &amp; Well staff cannot read your data. You can delete your account at any time.
+          </div>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
   if (onboardingDone && openingMood === null) {
     // If logged in — show compact welcome back instead of full mood screen
     if (currentUser) return (
+      <>
+        {authModalJSX}
       <div style={{ minHeight: "100vh", background: "linear-gradient(160deg, #f6f9f4 0%, #eef6ec 100%)", fontFamily: "'Nunito Sans', sans-serif", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 24px" }}>
         <style>{`@import url('https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400;1,700&family=Nunito+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap'); * { box-sizing: border-box; } @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } } .mood-card { animation: fadeIn 0.4s ease both; }`}</style>
         <div style={{ textAlign: "center", marginBottom: 32, animation: "fadeIn 0.5s ease" }}>
@@ -1113,10 +1173,13 @@ export default function MentalHealthTracker() {
           Go straight in
         </button>
       </div>
+      </>
     );
 
     // Not logged in — full mood screen with sign up nudge at bottom
     return (
+    <>
+      {authModalJSX}
     <div style={{ minHeight: "100vh", background: "linear-gradient(160deg, #f6f9f4 0%, #eef6ec 100%)", fontFamily: "'Nunito Sans', sans-serif", display: "flex", flexDirection: "column" }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400;1,700&family=Nunito+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap'); * { box-sizing: border-box; } @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } } .mood-card { animation: fadeIn 0.4s ease both; }`}</style>
       <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "48px 24px 32px", gap: 28 }}>
@@ -1208,6 +1271,7 @@ export default function MentalHealthTracker() {
 
       </div>
     </div>
+    </>
   );
   } // end opening mood screen
 
