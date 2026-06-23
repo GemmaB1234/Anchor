@@ -596,6 +596,13 @@ export default function MentalHealthTracker() {
     if (storedAnchors) setAnchorPhotos(JSON.parse(storedAnchors));
     const storedMoodboard = localStorage.getItem("mh_moodboard");
     if (storedMoodboard) setMoodboard(JSON.parse(storedMoodboard));
+
+    // If signed in, fetch fresh data from Supabase in background
+    const storedUserRaw = localStorage.getItem("mh_user");
+    if (storedUserRaw) {
+      const parsedUser = JSON.parse(storedUserRaw);
+      if (parsedUser?.id) loadFromSupabase(parsedUser.id);
+    }
   }, []);
   useEffect(() => {
     if (typeof Notification === "undefined") return;
@@ -616,7 +623,83 @@ export default function MentalHealthTracker() {
     return () => Object.values(reminderRef.current).forEach(clearInterval);
   }, [customActivities]);
 
-  const saveJournalEntry = () => {
+  const loadFromSupabase = async (userId) => {
+    const sb = getSupabase();
+    if (!sb || !userId) return;
+    try {
+      // Fetch check-ins
+      const { data: checkIns } = await sb
+        .from("check_ins")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(30);
+      if (checkIns?.length) {
+        const mapped = checkIns.map(r => ({
+          id: new Date(r.created_at).getTime(),
+          date: r.created_at,
+          mood: r.mood_score,
+          stress: (() => {
+            const stressTag = (r.emotions || []).find(e => e.startsWith("stress:"));
+            return stressTag ? parseInt(stressTag.split(":")[1]) : 0;
+          })(),
+          journal: r.note || "",
+          _sbId: r.id,
+        }));
+        setEntries(mapped);
+        localStorage.setItem("mh_entries", JSON.stringify(mapped));
+      }
+
+      // Fetch journal entries
+      const { data: journals } = await sb
+        .from("journal_entries")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (journals?.length) {
+        const mapped = journals.map(r => ({
+          id: new Date(r.created_at).getTime(),
+          text: r.content,
+          date: r.created_at,
+          _sbId: r.id,
+        }));
+        setJournalEntries(mapped);
+        localStorage.setItem("mh_journal_entries", JSON.stringify(mapped));
+      }
+
+      // Fetch safety plan
+      const { data: plans } = await sb
+        .from("safety_plans")
+        .select("*")
+        .eq("user_id", userId)
+        .limit(1);
+      if (plans?.length) {
+        const r = plans[0];
+        const merged = {
+          warningSigns: (r.warning_signs || []).join("\n"),
+          copingStrategies: (r.coping_strategies || []).join("\n"),
+          distractions: "",
+          supportPeople: (r.contacts || []).join("\n"),
+          professionalContacts: (r.crisis_resources || []).join("\n"),
+          crisisTeamNumber: "",
+          safeEnvironment: "",
+          reasons: (r.reasons_to_live || []).join("\n"),
+          level1: "",
+          level2: "",
+          level3: "",
+          lastUpdated: r.updated_at,
+          _sbId: r.id,
+        };
+        setSafetyPlan(merged);
+        localStorage.setItem("mh_safety_plan", JSON.stringify(merged));
+      }
+    } catch (err) {
+      console.warn("Supabase load error — falling back to localStorage:", err);
+    }
+  };
+
+  const saveJournalEntry = async () => {
     if (!journal.trim()) return;
     const entry = { id: Date.now(), text: journal.trim(), date: new Date().toISOString() };
     const updated = [entry, ...journalEntries].slice(0, 50);
@@ -625,6 +708,23 @@ export default function MentalHealthTracker() {
     setJournalSaved(true);
     setTimeout(() => setJournalSaved(false), 2000);
     setJournal("");
+
+    // Sync to Supabase in background
+    if (currentUser?.id) {
+      try {
+        const sb = getSupabase();
+        if (sb) {
+          await sb.from("journal_entries").insert({
+            user_id: currentUser.id,
+            content: entry.text,
+            title: null,
+            tags: [],
+          });
+        }
+      } catch (err) {
+        console.warn("Journal sync error:", err);
+      }
+    }
   };
 
   const deleteJournalEntry = (id) => {
@@ -634,12 +734,32 @@ export default function MentalHealthTracker() {
     if (viewingEntry?.id === id) setViewingEntry(null);
   };
 
-  const saveSafetyPlan = () => {
+  const saveSafetyPlan = async () => {
     const updated = { ...safetyPlan, lastUpdated: new Date().toISOString() };
     setSafetyPlan(updated);
     localStorage.setItem("mh_safety_plan", JSON.stringify(updated));
     setPlanSaved(true);
     setTimeout(() => setPlanSaved(false), 2000);
+
+    // Sync to Supabase in background
+    if (currentUser?.id) {
+      try {
+        const sb = getSupabase();
+        if (sb) {
+          await sb.from("safety_plans").upsert({
+            user_id: currentUser.id,
+            warning_signs: updated.warningSigns?.split("\n").filter(Boolean) || [],
+            coping_strategies: updated.copingStrategies?.split("\n").filter(Boolean) || [],
+            reasons_to_live: updated.reasons?.split("\n").filter(Boolean) || [],
+            contacts: updated.supportPeople?.split("\n").filter(Boolean) || [],
+            crisis_resources: updated.professionalContacts?.split("\n").filter(Boolean) || [],
+            updated_at: new Date().toISOString(),
+          }, { onConflict: "user_id" });
+        }
+      } catch (err) {
+        console.warn("Safety plan sync error:", err);
+      }
+    }
   };
 
   const updatePlan = (field, value) => setSafetyPlan(p => ({ ...p, [field]: value }));
@@ -704,6 +824,26 @@ export default function MentalHealthTracker() {
     const updated = [entry, ...entries].slice(0, 30);
     setEntries(updated);
     localStorage.setItem("mh_entries", JSON.stringify(updated));
+
+    // Sync to Supabase in background
+    if (currentUser?.id) {
+      try {
+        const sb = getSupabase();
+        if (sb) {
+          const emotionTags = [];
+          if (stress > 0) emotionTags.push(`stress:${stress}`);
+          sb.from("check_ins").insert({
+            user_id: currentUser.id,
+            mood_score: mood || null,
+            emotions: emotionTags,
+            note: journal.trim() || null,
+          }).then(({ error }) => { if (error) console.warn("Check-in sync error:", error); });
+        }
+      } catch (err) {
+        console.warn("Check-in sync error:", err);
+      }
+    }
+
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
     setJournal("");
@@ -867,12 +1007,17 @@ export default function MentalHealthTracker() {
   const today = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 
   // ── SUPABASE CLIENT ──────────────────────────────────────────────────────
+  const sbClientRef = useRef(null);
   const getSupabase = () => {
+    if (sbClientRef.current) return sbClientRef.current;
     try {
       const url = import.meta?.env?.VITE_SUPABASE_URL || "";
       const key = import.meta?.env?.VITE_SUPABASE_ANON_KEY || "";
       if (!url || !key) return null;
-      if (window.supabase) return window.supabase.createClient(url, key);
+      if (window.supabase) {
+        sbClientRef.current = window.supabase.createClient(url, key);
+        return sbClientRef.current;
+      }
     } catch {}
     return null;
   };
@@ -954,6 +1099,7 @@ export default function MentalHealthTracker() {
           const user = { name, email: data.user.email, id: data.user.id };
           setCurrentUser(user);
           localStorage.setItem("mh_user", JSON.stringify(user));
+          loadFromSupabase(user.id);
           setAuthScreen("welcome");
           forceUpdate(n => n + 1);
           setTimeout(() => setAuthScreen(null), 2200);
