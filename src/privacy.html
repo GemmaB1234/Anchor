@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — Wired & Well</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Nunito+Sans:wght@300;400;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --teal: #34a853;
+      --teal-dark: #2a8a44;
+      --teal-light: #e8f5e4;
+      --teal-mid: #c8e4c0;
+      --ink: #1a3820;
+      --ink-soft: #4a7a4a;
+      --muted: #8aaa88;
+      --mono: #9aba98;
+      --bg: #f6f9f4;
+      --white: #ffffff;
+      --border: #deeeda;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Nunito Sans', sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.8;
+      font-size: 16px;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .brand-anchor {
+      font-family: 'Nunito', sans-serif;
+      font-weight: 900;
+      font-size: 20px;
+      color: var(--ink);
+    }
+
+    .brand-sub {
+      font-family: 'DM Mono', monospace;
+      font-size: 9px;
+      color: var(--mono);
+      letter-spacing: 2px;
+    }
+
+    .back-link {
+      font-family: 'Nunito', sans-serif;
+      font-size: 13px;
+      color: var(--ink-soft);
+      text-decoration: none;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .back-link:hover { color: var(--teal); }
+
+    /* ── HERO ── */
+    .hero {
+      background: linear-gradient(135deg, #f0fdf4 0%, #e8f5e8 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 56px 32px 48px;
+      text-align: center;
+    }
+
+    .hero-eyebrow {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 3px;
+      color: var(--mono);
+      margin-bottom: 16px;
+    }
+
+    .hero h1 {
+      font-family: 'Nunito', sans-serif;
+      font-weight: 900;
+      font-size: clamp(28px, 5vw, 42px);
+      color: var(--ink);
+      line-height: 1.15;
+      margin-bottom: 16px;
+    }
+
+    .hero p {
+      font-size: 16px;
+      color: var(--ink-soft);
+      max-width: 540px;
+      margin: 0 auto 20px;
+      line-height: 1.7;
+    }
+
+    .hero-meta {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--mono);
+      letter-spacing: 1px;
+    }
+
+    /* ── LAYOUT ── */
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 48px 32px 80px;
+    }
+
+    /* ── TOC ── */
+    .toc {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 24px 28px;
+      margin-bottom: 40px;
+    }
+
+    .toc-title {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 2.5px;
+      color: var(--mono);
+      margin-bottom: 14px;
+    }
+
+    .toc ol {
+      list-style: none;
+      counter-reset: toc;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .toc ol li { counter-increment: toc; }
+
+    .toc ol li a {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      font-size: 14px;
+      color: var(--ink-soft);
+      font-weight: 600;
+      font-family: 'Nunito', sans-serif;
+      transition: color 0.15s;
+    }
+
+    .toc ol li a::before {
+      content: counter(toc, decimal-leading-zero);
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      color: var(--mono);
+      flex-shrink: 0;
+    }
+
+    .toc ol li a:hover { color: var(--teal); }
+
+    /* ── SECTIONS ── */
+    .section {
+      margin-bottom: 44px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section-number {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--mono);
+      letter-spacing: 1px;
+      margin-top: 4px;
+      flex-shrink: 0;
+    }
+
+    .section h2 {
+      font-family: 'Nunito', sans-serif;
+      font-weight: 800;
+      font-size: 20px;
+      color: var(--ink);
+      line-height: 1.3;
+    }
+
+    .section p {
+      color: var(--ink-soft);
+      margin-bottom: 12px;
+      font-size: 15px;
+    }
+
+    .section p:last-child { margin-bottom: 0; }
+
+    .section ul, .section ol {
+      padding-left: 20px;
+      color: var(--ink-soft);
+      font-size: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    /* ── CALLOUT BOXES ── */
+    .callout {
+      border-radius: 14px;
+      padding: 16px 20px;
+      margin: 16px 0;
+      font-size: 14px;
+    }
+
+    .callout-green {
+      background: var(--teal-light);
+      border: 1px solid var(--teal-mid);
+      color: #1e4a28;
+    }
+
+    .callout-green strong {
+      font-family: 'Nunito', sans-serif;
+      font-weight: 800;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .callout-blue {
+      background: #eff6ff;
+      border: 1px solid #c0d8f0;
+      color: #1e3a5f;
+    }
+
+    .callout-blue strong {
+      font-family: 'Nunito', sans-serif;
+      font-weight: 800;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    /* ── CONTACT ── */
+    .contact-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 24px 28px;
+      margin-top: 40px;
+      text-align: center;
+    }
+
+    .contact-card h3 {
+      font-family: 'Nunito', sans-serif;
+      font-weight: 800;
+      font-size: 18px;
+      color: var(--ink);
+      margin-bottom: 8px;
+    }
+
+    .contact-card p {
+      font-size: 14px;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+
+    .contact-card a {
+      display: inline-block;
+      padding: 12px 28px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--teal), var(--teal-dark));
+      color: white;
+      text-decoration: none;
+      font-family: 'Nunito', sans-serif;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 28px 32px;
+      text-align: center;
+      background: var(--white);
+    }
+
+    footer p {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      color: var(--mono);
+      letter-spacing: 1px;
+      line-height: 1.8;
+    }
+
+    footer a {
+      color: var(--teal);
+      text-decoration: none;
+    }
+
+    @media (max-width: 600px) {
+      header { padding: 14px 20px; }
+      .hero { padding: 40px 20px 36px; }
+      .container { padding: 32px 20px 60px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <a href="https://www.wiredandwell.co.uk" class="brand">
+      <div>
+        <div class="brand-anchor">Wired &amp; Well</div>
+        <div class="brand-sub">DIGITAL WELLNESS</div>
+      </div>
+    </a>
+    <a href="https://www.wiredandwell.co.uk" class="back-link">← Back to site</a>
+  </header>
+
+  <div class="hero">
+    <div class="hero-eyebrow">WIRED &amp; WELL LTD</div>
+    <h1>Privacy Policy</h1>
+    <p>We built Anchor and all Wired &amp; Well products with privacy at the centre — not as an afterthought. Here's exactly what we collect, why, and what we never do.</p>
+    <div class="hero-meta">Last updated: June 2025 &nbsp;·&nbsp; Applies to anchor.wiredandwell.co.uk and wiredandwell.co.uk</div>
+  </div>
+
+  <div class="container">
+
+    <div class="callout callout-green">
+      <strong>🔒 The short version</strong>
+      Your journal entries, check-ins, safety plan, and mood data are yours. We cannot read them. We don't sell data. We don't show ads. We never will.
+    </div>
+
+    <nav class="toc">
+      <div class="toc-title">CONTENTS</div>
+      <ol>
+        <li><a href="#who">Who we are</a></li>
+        <li><a href="#what">What data we collect</a></li>
+        <li><a href="#how">How we use it</a></li>
+        <li><a href="#storage">Where data is stored</a></li>
+        <li><a href="#sharing">Who we share it with</a></li>
+        <li><a href="#rights">Your rights</a></li>
+        <li><a href="#cookies">Cookies</a></li>
+        <li><a href="#children">Children</a></li>
+        <li><a href="#changes">Changes to this policy</a></li>
+        <li><a href="#contact">Contact us</a></li>
+      </ol>
+    </nav>
+
+    <div class="section" id="who">
+      <div class="section-header">
+        <span class="section-number">01</span>
+        <h2>Who we are</h2>
+      </div>
+      <p>Wired &amp; Well Ltd is a digital wellness company based in the United Kingdom. We build tools — including Anchor — designed to support people's mental health and wellbeing, with a particular focus on neurodivergent experiences.</p>
+      <p>For the purposes of UK data protection law, Wired &amp; Well Ltd is the data controller for personal data collected through our products and website.</p>
+      <p>You can contact us at: <strong>hello@wiredandwell.co.uk</strong></p>
+    </div>
+
+    <div class="section" id="what">
+      <div class="section-header">
+        <span class="section-number">02</span>
+        <h2>What data we collect</h2>
+      </div>
+      <p>We only collect what's needed to make the product work. Here's what that means in practice:</p>
+
+      <p><strong>If you use Anchor without an account:</strong></p>
+      <ul>
+        <li>All data (check-ins, journal entries, safety plan, mood board photos) is stored locally on your device using your browser's localStorage</li>
+        <li>We receive no data at all — it never leaves your device</li>
+      </ul>
+
+      <p><strong>If you create an Anchor account:</strong></p>
+      <ul>
+        <li>Your email address and chosen display name</li>
+        <li>Your encrypted password (we never see it in plain text)</li>
+        <li>Check-in data: mood scores, stress levels, and optional notes</li>
+        <li>Journal entries you choose to save</li>
+        <li>Safety plan content you complete</li>
+        <li>The date and time records were created</li>
+      </ul>
+
+      <p><strong>Automatically collected:</strong></p>
+      <ul>
+        <li>Basic analytics — page visits and feature usage (no personal identifiers)</li>
+        <li>Error logs — to help us fix bugs</li>
+        <li>Your approximate country (used only to show relevant crisis resources)</li>
+      </ul>
+
+      <div class="callout callout-green">
+        <strong>Photos and mood board images</strong>
+        Photos you add to Anchor (mood board, anchor photos) are stored only on your device. They are never uploaded to our servers.
+      </div>
+    </div>
+
+    <div class="section" id="how">
+      <div class="section-header">
+        <span class="section-number">03</span>
+        <h2>How we use your data</h2>
+      </div>
+      <p>We use your data only for the following purposes:</p>
+      <ul>
+        <li>To provide and maintain Anchor — syncing your data across devices when you're signed in</li>
+        <li>To show you your own history, trends, and progress</li>
+        <li>To send transactional emails (account confirmation, password reset) — no marketing unless you opt in</li>
+        <li>To improve the product — using anonymised, aggregated usage data only</li>
+      </ul>
+      <p>We will never use your mental health data for advertising, profiling, or any purpose beyond making the product work for you.</p>
+    </div>
+
+    <div class="section" id="storage">
+      <div class="section-header">
+        <span class="section-number">04</span>
+        <h2>Where data is stored</h2>
+      </div>
+      <p>Anchor uses <strong>Supabase</strong> to store account data securely. Supabase is an open-source database platform that stores data in EU-based servers. Data is encrypted at rest and in transit.</p>
+      <p>Row Level Security (RLS) is enabled on all tables — this means your data is technically inaccessible to anyone other than you, including Wired &amp; Well staff. We have no ability to read your journal entries or safety plan content.</p>
+      <div class="callout callout-blue">
+        <strong>What this means in practice</strong>
+        Even if someone at Wired &amp; Well wanted to read your journal, they couldn't. The database is structured so that only your authenticated session can access your rows.
+      </div>
+    </div>
+
+    <div class="section" id="sharing">
+      <div class="section-header">
+        <span class="section-number">05</span>
+        <h2>Who we share data with</h2>
+      </div>
+      <p>We do not sell, rent, or share your personal data with third parties for commercial purposes. Full stop.</p>
+      <p>The only third-party services that handle any data are:</p>
+      <ul>
+        <li><strong>Supabase</strong> — database and authentication infrastructure</li>
+        <li><strong>Vercel</strong> — website and app hosting</li>
+        <li><strong>Microsoft 365</strong> — email (hello@wiredandwell.co.uk)</li>
+      </ul>
+      <p>Each of these is bound by their own data processing agreements and GDPR-compliant policies. We do not use advertising networks, data brokers, or analytics platforms that track individuals.</p>
+      <p>We may be required to disclose data if compelled by law, but we will always notify you if legally permitted to do so.</p>
+    </div>
+
+    <div class="section" id="rights">
+      <div class="section-header">
+        <span class="section-number">06</span>
+        <h2>Your rights</h2>
+      </div>
+      <p>Under UK GDPR, you have the right to:</p>
+      <ul>
+        <li><strong>Access</strong> — request a copy of the data we hold about you</li>
+        <li><strong>Rectification</strong> — correct any inaccurate data</li>
+        <li><strong>Erasure</strong> — delete your account and all associated data</li>
+        <li><strong>Portability</strong> — export your data in a machine-readable format (available in the Anchor app under Account → Download my data)</li>
+        <li><strong>Restriction</strong> — ask us to stop processing your data in certain ways</li>
+        <li><strong>Object</strong> — object to processing based on legitimate interests</li>
+      </ul>
+      <p>To exercise any of these rights, email us at <strong>hello@wiredandwell.co.uk</strong>. We will respond within 30 days.</p>
+      <p>If you believe we have handled your data unlawfully, you have the right to complain to the <strong>Information Commissioner's Office (ICO)</strong> at ico.org.uk.</p>
+    </div>
+
+    <div class="section" id="cookies">
+      <div class="section-header">
+        <span class="section-number">07</span>
+        <h2>Cookies</h2>
+      </div>
+      <p>Anchor uses minimal cookies — only those strictly necessary for the app to function (authentication session tokens). We do not use tracking cookies, advertising cookies, or third-party analytics cookies.</p>
+      <p>You can clear cookies at any time through your browser settings. This will sign you out of your Anchor account.</p>
+    </div>
+
+    <div class="section" id="children">
+      <div class="section-header">
+        <span class="section-number">08</span>
+        <h2>Children</h2>
+      </div>
+      <p>Anchor is designed for adults aged 18 and over. We do not knowingly collect data from anyone under 18. If you believe a child has created an account, please contact us at hello@wiredandwell.co.uk and we will delete the account promptly.</p>
+      <p>Our separate product Spark is designed for young people aged 7–18, with additional safeguards and parental consent requirements. A separate privacy notice applies to Spark.</p>
+    </div>
+
+    <div class="section" id="changes">
+      <div class="section-header">
+        <span class="section-number">09</span>
+        <h2>Changes to this policy</h2>
+      </div>
+      <p>We may update this policy from time to time. When we do, we will update the "last updated" date at the top of this page. For significant changes, we will notify users by email.</p>
+      <p>Continuing to use Anchor after changes are posted means you accept the updated policy.</p>
+    </div>
+
+    <div class="section" id="contact">
+      <div class="section-header">
+        <span class="section-number">10</span>
+        <h2>Contact us</h2>
+      </div>
+      <p>If you have any questions about this policy or how we handle your data, please get in touch.</p>
+    </div>
+
+    <div class="contact-card">
+      <h3>Get in touch</h3>
+      <p>We'll respond to all privacy queries within 30 days.</p>
+      <a href="mailto:hello@wiredandwell.co.uk">hello@wiredandwell.co.uk</a>
+    </div>
+
+  </div>
+
+  <footer>
+    <p>
+      &copy; 2025 Wired &amp; Well Ltd &nbsp;·&nbsp;
+      <a href="/privacy.html">Privacy Policy</a> &nbsp;·&nbsp;
+      <a href="/terms.html">Terms of Service</a> &nbsp;·&nbsp;
+      <a href="https://anchor.wiredandwell.co.uk">Anchor App</a>
+    </p>
+    <p style="margin-top:6px;">Registered in England &amp; Wales &nbsp;·&nbsp; hello@wiredandwell.co.uk</p>
+  </footer>
+
+</body>
+</html>
