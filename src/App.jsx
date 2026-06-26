@@ -3868,7 +3868,7 @@ export default function MentalHealthTracker() {
               <div style={{ fontSize: 11, color: "#6a8a6a", fontFamily: "'Nunito Sans', sans-serif", lineHeight: 1.7 }}>
                 Your journal, check-ins, and safety plan are stored privately in your own account. Wired &amp; Well staff cannot read your data. You can delete your account and all data at any time.
               </div>
-              <a href="https://www.wiredandwell.co.uk/privacy" target="_blank" rel="noopener noreferrer"
+              <a href="https://www.wiredandwell.co.uk/privacy.html" target="_blank" rel="noopener noreferrer"
                 style={{ fontSize: 11, color: "#34a853", fontFamily: "'Nunito', sans-serif", fontWeight: 700, textDecoration: "none", display: "block", marginTop: 8 }}>
                 Read our Privacy Policy →
               </a>
@@ -3928,8 +3928,8 @@ export default function MentalHealthTracker() {
                     const a = document.createElement("a");
                     a.href = url; a.download = "anchor-my-data.json"; a.click();
                   }},
-                  { icon: "📋", label: "Privacy Policy", value: "wiredandwell.co.uk/privacy", action: () => window.open("https://www.wiredandwell.co.uk/privacy") },
-                  { icon: "📄", label: "Terms of Service", value: "wiredandwell.co.uk/terms", action: () => window.open("https://www.wiredandwell.co.uk/terms") },
+                  { icon: "📋", label: "Privacy Policy", value: "wiredandwell.co.uk/privacy.html", action: () => window.open("https://www.wiredandwell.co.uk/privacy.html") },
+                  { icon: "📄", label: "Terms of Service", value: "wiredandwell.co.uk/terms.html", action: () => window.open("https://www.wiredandwell.co.uk/terms.html") },
                   { icon: "🗑️", label: "Delete my account", value: "Remove all data permanently", action: () => {
                     if (window.confirm("This will permanently delete your account and all data. Are you sure?")) {
                       localStorage.clear();
