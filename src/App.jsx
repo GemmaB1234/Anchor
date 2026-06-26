@@ -481,6 +481,7 @@ export default function MentalHealthTracker() {
   const [currentUser, setCurrentUser] = useState(null); // { name, email }
   const [showAccount, setShowAccount] = useState(false);
   const [tab, setTab] = useState("checkin");
+  const [showMoreNav, setShowMoreNav] = useState(false);
   const [openingMood, setOpeningMood] = useState(null); // null=not chosen yet | chosen mood obj
   const [mood, setMood] = useState(null);
   const [stress, setStress] = useState(0);
@@ -627,21 +628,17 @@ export default function MentalHealthTracker() {
     const sb = getSupabase();
     if (!sb || !userId) return;
     try {
-      // Fetch check-ins
       const { data: checkIns } = await sb
-        .from("check_ins")
-        .select("*")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false })
-        .limit(30);
+        .from("check_ins").select("*").eq("user_id", userId)
+        .order("created_at", { ascending: false }).limit(30);
       if (checkIns?.length) {
         const mapped = checkIns.map(r => ({
           id: new Date(r.created_at).getTime(),
           date: r.created_at,
           mood: r.mood_score,
           stress: (() => {
-            const stressTag = (r.emotions || []).find(e => e.startsWith("stress:"));
-            return stressTag ? parseInt(stressTag.split(":")[1]) : 0;
+            const tag = (r.emotions || []).find(e => e.startsWith("stress:"));
+            return tag ? parseInt(tag.split(":")[1]) : 0;
           })(),
           journal: r.note || "",
           _sbId: r.id,
@@ -649,14 +646,9 @@ export default function MentalHealthTracker() {
         setEntries(mapped);
         localStorage.setItem("mh_entries", JSON.stringify(mapped));
       }
-
-      // Fetch journal entries
       const { data: journals } = await sb
-        .from("journal_entries")
-        .select("*")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false })
-        .limit(50);
+        .from("journal_entries").select("*").eq("user_id", userId)
+        .order("created_at", { ascending: false }).limit(50);
       if (journals?.length) {
         const mapped = journals.map(r => ({
           id: new Date(r.created_at).getTime(),
@@ -667,13 +659,8 @@ export default function MentalHealthTracker() {
         setJournalEntries(mapped);
         localStorage.setItem("mh_journal_entries", JSON.stringify(mapped));
       }
-
-      // Fetch safety plan
       const { data: plans } = await sb
-        .from("safety_plans")
-        .select("*")
-        .eq("user_id", userId)
-        .limit(1);
+        .from("safety_plans").select("*").eq("user_id", userId).limit(1);
       if (plans?.length) {
         const r = plans[0];
         const merged = {
@@ -685,9 +672,7 @@ export default function MentalHealthTracker() {
           crisisTeamNumber: "",
           safeEnvironment: "",
           reasons: (r.reasons_to_live || []).join("\n"),
-          level1: "",
-          level2: "",
-          level3: "",
+          level1: "", level2: "", level3: "",
           lastUpdated: r.updated_at,
           _sbId: r.id,
         };
@@ -695,7 +680,7 @@ export default function MentalHealthTracker() {
         localStorage.setItem("mh_safety_plan", JSON.stringify(merged));
       }
     } catch (err) {
-      console.warn("Supabase load error — falling back to localStorage:", err);
+      console.warn("Supabase load error:", err);
     }
   };
 
@@ -708,22 +693,11 @@ export default function MentalHealthTracker() {
     setJournalSaved(true);
     setTimeout(() => setJournalSaved(false), 2000);
     setJournal("");
-
-    // Sync to Supabase in background
     if (currentUser?.id) {
       try {
         const sb = getSupabase();
-        if (sb) {
-          await sb.from("journal_entries").insert({
-            user_id: currentUser.id,
-            content: entry.text,
-            title: null,
-            tags: [],
-          });
-        }
-      } catch (err) {
-        console.warn("Journal sync error:", err);
-      }
+        if (sb) await sb.from("journal_entries").insert({ user_id: currentUser.id, content: entry.text, title: null, tags: [] });
+      } catch (err) { console.warn("Journal sync error:", err); }
     }
   };
 
@@ -740,25 +714,19 @@ export default function MentalHealthTracker() {
     localStorage.setItem("mh_safety_plan", JSON.stringify(updated));
     setPlanSaved(true);
     setTimeout(() => setPlanSaved(false), 2000);
-
-    // Sync to Supabase in background
     if (currentUser?.id) {
       try {
         const sb = getSupabase();
-        if (sb) {
-          await sb.from("safety_plans").upsert({
-            user_id: currentUser.id,
-            warning_signs: updated.warningSigns?.split("\n").filter(Boolean) || [],
-            coping_strategies: updated.copingStrategies?.split("\n").filter(Boolean) || [],
-            reasons_to_live: updated.reasons?.split("\n").filter(Boolean) || [],
-            contacts: updated.supportPeople?.split("\n").filter(Boolean) || [],
-            crisis_resources: updated.professionalContacts?.split("\n").filter(Boolean) || [],
-            updated_at: new Date().toISOString(),
-          }, { onConflict: "user_id" });
-        }
-      } catch (err) {
-        console.warn("Safety plan sync error:", err);
-      }
+        if (sb) await sb.from("safety_plans").upsert({
+          user_id: currentUser.id,
+          warning_signs: updated.warningSigns?.split("\n").filter(Boolean) || [],
+          coping_strategies: updated.copingStrategies?.split("\n").filter(Boolean) || [],
+          reasons_to_live: updated.reasons?.split("\n").filter(Boolean) || [],
+          contacts: updated.supportPeople?.split("\n").filter(Boolean) || [],
+          crisis_resources: updated.professionalContacts?.split("\n").filter(Boolean) || [],
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "user_id" });
+      } catch (err) { console.warn("Safety plan sync error:", err); }
     }
   };
 
@@ -839,9 +807,7 @@ export default function MentalHealthTracker() {
             note: journal.trim() || null,
           }).then(({ error }) => { if (error) console.warn("Check-in sync error:", error); });
         }
-      } catch (err) {
-        console.warn("Check-in sync error:", err);
-      }
+      } catch (err) { console.warn("Check-in sync error:", err); }
     }
 
     setSaved(true);
@@ -1002,6 +968,8 @@ export default function MentalHealthTracker() {
   ];
   const tabOrder = profile?.tabs || ALL_TABS.map(t => t.id);
   const TABS = tabOrder.map(id => ALL_TABS.find(t => t.id === id)).filter(Boolean);
+  const BOTTOM_TABS = TABS.slice(0, 4);
+  const MORE_TABS = TABS.slice(4);
 
   const quote = QUOTES[quoteIdx];
   const today = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
@@ -1592,25 +1560,22 @@ export default function MentalHealthTracker() {
         @keyframes shimmer { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
       `}</style>
 
-      {/* Header + coming soon + tabs — compact static */}
+      {/* Header — compact, no tab bar */}
       <div style={{
         position: "sticky", top: 0, zIndex: 10,
         background: "#f6f9f4",
         boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
       }}>
         {/* Compact top bar */}
-        <div style={{ padding: "10px 32px 8px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          {/* Left — date + greeting */}
+        <div style={{ padding: "10px 20px 8px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 8, color: "#7aaa7a", fontFamily: "'DM Mono', monospace", letterSpacing: 2 }}>{today.toUpperCase()}</div>
-            <div style={{ fontSize: 16, fontFamily: "'Nunito', sans-serif", fontWeight: 800, color: "#2a4a2a", lineHeight: 1.3, marginTop: 1, maxWidth: 220 }}>
+            <div style={{ fontSize: 16, fontFamily: "'Nunito', sans-serif", fontWeight: 800, color: "#2a4a2a", lineHeight: 1.3, marginTop: 1 }}>
               {profile?.greetings
                 ? profile.greetings[new Date().getDay() % profile.greetings.length]
                 : "How are you really?"}
             </div>
           </div>
-
-          {/* Right — Anchor brand + buttons in one row */}
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
             <a href="https://www.wiredandwell.co.uk" target="_blank" rel="noopener noreferrer"
               style={{ textDecoration: "none", display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
@@ -1635,26 +1600,10 @@ export default function MentalHealthTracker() {
             Beta — cloud sync &amp; accounts <span style={{ color: "#fbbf24", fontWeight: 800 }}>coming soon</span>
           </div>
         </div>
-
-        {/* Tab grid */}
-        <div style={{ borderBottom: "1px solid #e8f0e4", background: "#f6f9f4", padding: "4px 8px 3px" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(10, 1fr)", gap: "2px 0" }}>
-            {TABS.map(t => (
-              <button key={t.id} onClick={() => setTab(t.id)}
-                style={{ padding: "5px 2px 6px", border: "none", background: tab === t.id ? "rgba(52,168,83,0.08)" : "transparent", borderRadius: 10, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, position: "relative", transition: "background 0.15s" }}>
-                {tab === t.id && (
-                  <div style={{ position: "absolute", top: 0, left: "20%", right: "20%", height: 2, borderRadius: 2, background: "linear-gradient(90deg, #34a853, #22c55e)" }} />
-                )}
-                <span style={{ fontSize: tab === t.id ? 19 : 17, transition: "font-size 0.15s" }}>{t.emoji}</span>
-                <span style={{ fontSize: 8, fontFamily: "'Nunito', sans-serif", fontWeight: tab === t.id ? 800 : 500, color: tab === t.id ? "#2a5a2a" : "#9aba90", whiteSpace: "nowrap" }}>{t.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, padding: "20px 32px 100px", maxWidth: "1200px", margin: "0 auto", width: "100%" }}>
+      <div style={{ flex: 1, padding: "20px 20px 100px", maxWidth: "780px", margin: "0 auto", width: "100%" }}>
 
         {/* CHECK IN TAB */}
         {tab === "checkin" && (
@@ -3868,7 +3817,7 @@ export default function MentalHealthTracker() {
               <div style={{ fontSize: 11, color: "#6a8a6a", fontFamily: "'Nunito Sans', sans-serif", lineHeight: 1.7 }}>
                 Your journal, check-ins, and safety plan are stored privately in your own account. Wired &amp; Well staff cannot read your data. You can delete your account and all data at any time.
               </div>
-              <a href="https://www.wiredandwell.co.uk/privacy.html" target="_blank" rel="noopener noreferrer"
+              <a href="https://www.wiredandwell.co.uk/privacy" target="_blank" rel="noopener noreferrer"
                 style={{ fontSize: 11, color: "#34a853", fontFamily: "'Nunito', sans-serif", fontWeight: 700, textDecoration: "none", display: "block", marginTop: 8 }}>
                 Read our Privacy Policy →
               </a>
@@ -3928,8 +3877,8 @@ export default function MentalHealthTracker() {
                     const a = document.createElement("a");
                     a.href = url; a.download = "anchor-my-data.json"; a.click();
                   }},
-                  { icon: "📋", label: "Privacy Policy", value: "wiredandwell.co.uk/privacy.html", action: () => window.open("https://www.wiredandwell.co.uk/privacy.html") },
-                  { icon: "📄", label: "Terms of Service", value: "wiredandwell.co.uk/terms.html", action: () => window.open("https://www.wiredandwell.co.uk/terms.html") },
+                  { icon: "📋", label: "Privacy Policy", value: "wiredandwell.co.uk/privacy", action: () => window.open("https://www.wiredandwell.co.uk/privacy") },
+                  { icon: "📄", label: "Terms of Service", value: "wiredandwell.co.uk/terms", action: () => window.open("https://www.wiredandwell.co.uk/terms") },
                   { icon: "🗑️", label: "Delete my account", value: "Remove all data permanently", action: () => {
                     if (window.confirm("This will permanently delete your account and all data. Are you sure?")) {
                       localStorage.clear();
@@ -4291,7 +4240,7 @@ export default function MentalHealthTracker() {
         </div>
       )}
       {/* DISCLAIMER */}
-      <div style={{ padding: "20px 24px 32px", textAlign: "center", borderTop: "1px solid #e8f0e4", marginTop: 8 }}>
+      <div style={{ padding: "20px 24px 100px", textAlign: "center", borderTop: "1px solid #e8f0e4", marginTop: 8 }}>
         <div style={{ fontSize: 11, color: "#9aba98", fontFamily: "'Nunito Sans', sans-serif", lineHeight: 1.8, maxWidth: 360, margin: "0 auto" }}>
           Anchor is a self-help tool and is not a substitute for professional medical advice, diagnosis or treatment. If you are in crisis or need urgent help, please contact emergency services or a mental health professional.
         </div>
@@ -4299,6 +4248,105 @@ export default function MentalHealthTracker() {
           WIRED &amp; WELL · ANCHOR · wiredandwell.co.uk
         </div>
       </div>
+
+      {/* ── BOTTOM NAV BAR ── */}
+      <div style={{
+        position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 50,
+        background: "rgba(246,249,244,0.96)",
+        backdropFilter: "blur(12px)",
+        borderTop: "1px solid #e0eed8",
+        display: "flex",
+        padding: "6px 0 calc(6px + env(safe-area-inset-bottom))",
+        boxShadow: "0 -2px 16px rgba(0,0,0,0.06)",
+      }}>
+        {BOTTOM_TABS.map(t => (
+          <button key={t.id} onClick={() => { setTab(t.id); setShowMoreNav(false); }}
+            style={{
+              flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
+              gap: 3, padding: "6px 4px 4px", border: "none", background: "transparent",
+              cursor: "pointer", position: "relative",
+            }}>
+            {tab === t.id && (
+              <div style={{
+                position: "absolute", top: 0, left: "25%", right: "25%",
+                height: 3, borderRadius: 2,
+                background: "linear-gradient(90deg, #34a853, #22c55e)",
+              }} />
+            )}
+            <span style={{ fontSize: tab === t.id ? 26 : 24, lineHeight: 1, transition: "font-size 0.15s" }}>{t.emoji}</span>
+            <span style={{
+              fontSize: 10, fontFamily: "'Nunito', sans-serif",
+              fontWeight: tab === t.id ? 800 : 500,
+              color: tab === t.id ? "#2a5a2a" : "#9aba90",
+              whiteSpace: "nowrap",
+            }}>{t.label}</span>
+          </button>
+        ))}
+        {/* More button */}
+        <button onClick={() => setShowMoreNav(m => !m)}
+          style={{
+            flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
+            gap: 3, padding: "6px 4px 4px", border: "none", background: "transparent",
+            cursor: "pointer", position: "relative",
+          }}>
+          {showMoreNav && (
+            <div style={{
+              position: "absolute", top: 0, left: "25%", right: "25%",
+              height: 3, borderRadius: 2, background: "linear-gradient(90deg, #34a853, #22c55e)",
+            }} />
+          )}
+          <span style={{ fontSize: 24, lineHeight: 1 }}>•••</span>
+          <span style={{
+            fontSize: 10, fontFamily: "'Nunito', sans-serif",
+            fontWeight: showMoreNav ? 800 : 500,
+            color: showMoreNav ? "#2a5a2a" : "#9aba90",
+          }}>More</span>
+        </button>
+      </div>
+
+      {/* ── MORE DRAWER ── */}
+      {showMoreNav && (
+        <>
+          {/* Backdrop */}
+          <div onClick={() => setShowMoreNav(false)}
+            style={{ position: "fixed", inset: 0, zIndex: 48, background: "rgba(20,40,20,0.4)", backdropFilter: "blur(4px)" }} />
+          {/* Drawer */}
+          <div style={{
+            position: "fixed", bottom: "calc(64px + env(safe-area-inset-bottom))", left: 0, right: 0,
+            zIndex: 49,
+            background: "#f8fcf6",
+            borderTop: "1px solid #d4e8cc",
+            borderRadius: "24px 24px 0 0",
+            padding: "16px 20px 20px",
+            boxShadow: "0 -8px 32px rgba(0,0,0,0.1)",
+            animation: "slideUp 0.25s ease",
+          }}>
+            <style>{`@keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }`}</style>
+            <div style={{ width: 40, height: 4, background: "#c8e0c4", borderRadius: 2, margin: "0 auto 16px" }} />
+            <div style={{ fontSize: 10, fontFamily: "'DM Mono', monospace", color: "#9aba98", letterSpacing: 2.5, marginBottom: 12 }}>MORE</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+              {MORE_TABS.map(t => (
+                <button key={t.id} onClick={() => { setTab(t.id); setShowMoreNav(false); }}
+                  style={{
+                    display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
+                    padding: "14px 8px", border: "none", borderRadius: 16, cursor: "pointer",
+                    background: tab === t.id ? "rgba(52,168,83,0.1)" : "#f0f7ee",
+                    border: `1.5px solid ${tab === t.id ? "#34a853" : "#e0eed8"}`,
+                    transition: "all 0.15s",
+                  }}>
+                  <span style={{ fontSize: 28 }}>{t.emoji}</span>
+                  <span style={{
+                    fontSize: 11, fontFamily: "'Nunito', sans-serif",
+                    fontWeight: tab === t.id ? 800 : 600,
+                    color: tab === t.id ? "#2a5a2a" : "#5a8a5a",
+                    textAlign: "center", lineHeight: 1.3,
+                  }}>{t.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
